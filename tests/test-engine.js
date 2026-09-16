@@ -53,14 +53,16 @@ const purchasePrice = view.containers.find((container) => container.id === regul
 assert.ok(purchasePrice > 0);
 assert.equal(view.pendingItems.length, 3);
 const cashAfterPurchase = view.player.cash;
+const firstSlots = view.pendingItems[0].item.storageSlots || 1;
+const thirdSlots = view.pendingItems[2].item.storageSlots || 1;
 
 game.disposeItem(0, "store");
-assert.equal(game.getView().warehouse.used, 1);
+assert.equal(game.getView().warehouse.used, firstSlots);
 game.disposeItem(1, "sell");
 game.disposeItem(2, "store");
 view = game.getView();
 assert.equal(view.phase, "board");
-assert.equal(view.warehouse.used, 2);
+assert.equal(view.warehouse.used, firstSlots + thirdSlots);
 assert.notEqual(view.player.cash, cashAfterPurchase);
 
 const saved = game.exportSave();
@@ -70,25 +72,26 @@ assert.deepEqual(restored.getView(), game.getView(), "导出再载入必须保�
 const beforeRent = restored.getView().player.cash;
 restored.rentWarehouseExpansion();
 view = restored.getView();
-assert.equal(view.warehouse.activeCapacity, 40);
+assert.equal(view.warehouse.activeCapacity, 60);
 assert.equal(view.player.cash, beforeRent - 500);
 restored.rentWarehouseExpansion();
 view = restored.getView();
-assert.equal(view.warehouse.activeCapacity, 50);
+assert.equal(view.warehouse.activeCapacity, 70);
 assert.equal(view.player.cash, beforeRent - 1300, "同月升级只补仓租差额");
 
 const firstLot = view.warehouse.lots[0];
+const usedBeforeSale = view.warehouse.used;
 const beforeSale = view.player.cash;
 restored.sellWarehouseLot(firstLot.lotId, "stall");
-assert.equal(restored.getView().warehouse.used, 1);
+assert.equal(restored.getView().warehouse.used, usedBeforeSale - firstLot.storageSlots);
 assert.notEqual(restored.getView().player.cash, beforeSale);
 
 const beforeNewMonth = restored.getView();
 restored.advanceDay("2026-10-01");
 view = restored.getView();
 assert.equal(view.dateKey, "2026-10-01");
-assert.notEqual(view.containers[0].id + view.containers[0].public.exterior.id, beforeNewMonth.containers[0].id + beforeNewMonth.containers[0].public.exterior.id);
-assert.equal(view.warehouse.activeCapacity, 50);
+assert.notDeepEqual(view.containers, beforeNewMonth.containers, "跨日后必须生成新的五柜");
+assert.equal(view.warehouse.activeCapacity, 70);
 assert.equal(view.player.cash, beforeNewMonth.player.cash - 1300, "跨月自动扣除当前容量仓租");
 const sameDayBoard = view.containers;
 restored.advanceDay("2026-10-01");
@@ -150,6 +153,7 @@ console.log(JSON.stringify({
     "玩家胜出与扣款",
     "旁观开柜",
     "逐件售卖或入库",
+    "大件多仓位占用",
     "仓库租赁差额",
     "跨月仓租",
     "仓库出售",

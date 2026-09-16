@@ -4,128 +4,73 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#061e27">
-  <title>港口开仓 · 开箱交互样机</title>
+  <title>港口开仓</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <main class="app">
+  <div id="app" class="game-shell">
     <header class="topbar">
-      <div>
-        <p class="eyebrow">INTERACTION STUDY</p>
-        <h1>开仓动作样机</h1>
+      <div class="brand-block">
+        <p>临港打捞拍卖</p>
+        <h1>港口开仓</h1>
       </div>
-      <div class="prototype-badge">仅验证手感</div>
+      <div class="top-stats" aria-label="玩家资产">
+        <div class="top-stat">
+          <span>周转金</span>
+          <strong id="cashStat">¥6,000</strong>
+        </div>
+        <div class="top-stat">
+          <span>仓位</span>
+          <strong id="warehouseStat">0/50</strong>
+        </div>
+        <div class="top-stat">
+          <span>热度</span>
+          <strong id="heatStat">0</strong>
+        </div>
+      </div>
     </header>
 
-    <nav class="mode-switch" aria-label="交互模式">
-      <button class="mode-button is-active" type="button" data-mode="normal">日常柜</button>
-      <button class="mode-button" type="button" data-mode="combined">雾 · 断绳揭幕</button>
+    <main id="viewRoot" class="view-root" aria-live="polite">
+      <section id="boardView" class="game-view is-active"></section>
+      <section id="detailView" class="game-view"></section>
+      <section id="auctionView" class="game-view"></section>
+      <section id="openingView" class="game-view"></section>
+      <section id="dispositionView" class="game-view"></section>
+      <section id="warehouseView" class="game-view"></section>
+      <section id="marketView" class="game-view"></section>
+      <section id="collectionView" class="game-view"></section>
+    </main>
+
+    <aside id="liveTicker" class="live-ticker">
+      <span class="live-pulse"></span>
+      <div>
+        <strong>直播间</strong>
+        <p id="liveMessage">港口信号已接通，等你开第一柜。</p>
+      </div>
+      <span id="viewerCount" class="viewer-count">0 人</span>
+    </aside>
+
+    <nav id="bottomNav" class="bottom-nav" aria-label="主导航">
+      <button class="nav-button is-active" type="button" data-tab="board">
+        <i class="nav-icon icon-auction"></i><span>拍卖场</span>
+      </button>
+      <button class="nav-button" type="button" data-tab="warehouse">
+        <i class="nav-icon icon-warehouse"></i><span>仓库</span>
+      </button>
+      <button class="nav-button" type="button" data-tab="market">
+        <i class="nav-icon icon-market"></i><span>交易摊</span>
+      </button>
+      <button class="nav-button" type="button" data-tab="collection">
+        <i class="nav-icon icon-collection"></i><span>藏品册</span>
+      </button>
     </nav>
 
-    <section class="stage" aria-live="polite">
-      <div class="stage-glow"></div>
-      <header class="stage-heading">
-        <div>
-          <p class="stage-kicker" id="stageKicker">中价柜 · 中标后开仓</p>
-          <h2 id="stageTitle">旧港转运留置物</h2>
-        </div>
-        <div class="risk-chip" id="riskChip">常规开仓</div>
-      </header>
+    <div id="toast" class="toast" role="status"></div>
+    <div id="modalRoot" class="modal-root" hidden></div>
+  </div>
 
-      <div class="scene" id="scene">
-        <div class="floor-shadow"></div>
-        <div class="container" id="container">
-          <div class="container-top"></div>
-          <div class="container-side"></div>
-          <i class="corner-block corner-tl"></i>
-          <i class="corner-block corner-tr"></i>
-          <i class="corner-block corner-bl"></i>
-          <i class="corner-block corner-br"></i>
-
-          <div class="interior" aria-hidden="true">
-            <div class="light-cone"></div>
-            <div class="dust dust-a"></div>
-            <div class="dust dust-b"></div>
-            <div class="dust dust-c"></div>
-            <div class="cargo cargo-crate"><span>FRAGILE</span></div>
-            <div class="cargo cargo-case"><span>07</span></div>
-            <div class="cargo cargo-frame"></div>
-            <div class="cargo cargo-bag"></div>
-          </div>
-
-          <div class="door door-left">
-            <div class="door-ribs"></div>
-            <div class="paint-scratch scratch-one"></div>
-            <div class="paint-scratch scratch-two"></div>
-            <div class="serial-plate">YARD 03<br><b>CN–2047</b></div>
-            <div class="hinge hinge-a"></div>
-            <div class="hinge hinge-b"></div>
-            <div class="lock-rod rod-left-outer"><i></i><i></i><b></b></div>
-            <div class="lock-rod rod-left-inner"><i></i><i></i><b></b></div>
-          </div>
-          <div class="door door-right">
-            <div class="door-ribs"></div>
-            <div class="paint-scratch scratch-three"></div>
-            <div class="warning-mark">CAUTION</div>
-            <div class="hinge hinge-a"></div>
-            <div class="hinge hinge-b"></div>
-            <div class="lock-rod rod-right-inner"><i></i><i></i><b></b></div>
-            <div class="lock-rod rod-right-outer"><i></i><i></i><b></b></div>
-          </div>
-
-          <div class="door-seam"></div>
-          <button class="seal" id="seal" type="button" aria-label="向下拖动封签">
-            <span class="seal-ring"></span>
-            <span class="seal-bolt"></span>
-            <span class="seal-body"><b>港封</b><small>SEC · 047</small></span>
-            <span class="seal-tail"></span>
-          </button>
-
-          <div class="veil" id="veil" aria-hidden="true">
-            <div class="veil-folds"></div>
-            <div class="veil-stamp">UNKNOWN<br><span>SEALED LOT</span></div>
-          </div>
-          <div class="peel-tab" id="peelTab" aria-hidden="true">
-            <span></span>
-          </div>
-
-          <div class="rope-layer" id="ropeLayer" aria-hidden="true">
-            <div class="rope rope-one"></div>
-            <div class="rope rope-two"></div>
-            <div class="rope rope-three"></div>
-            <div class="knot"><i></i><i></i></div>
-          </div>
-          <div class="cut-trail" id="cutTrail"></div>
-
-          <div class="clue-card" id="clueCard">
-            <span>仅揭露一层</span>
-            <strong id="clueText">内部有规律金属碰撞声</strong>
-            <small>真实价值仍未知</small>
-          </div>
-        </div>
-      </div>
-
-      <div class="gesture-panel">
-        <div class="gesture-icon" id="gestureIcon"><i></i></div>
-        <div>
-          <strong id="gestureTitle">按住封签，向下扯断</strong>
-          <p id="gestureHint">动作到位就触发，不设置操作失败</p>
-        </div>
-        <div class="progress-ring" id="progressRing"><span id="progressText">0%</span></div>
-      </div>
-
-      <div class="result-strip" id="resultStrip">
-        <p>本柜估值浮动</p>
-        <strong>等待清点</strong>
-        <span>开门后，物品按稀有度逐件出现</span>
-      </div>
-    </section>
-
-    <footer class="prototype-footer">
-      <button class="reset-button" id="resetButton" type="button">重新演示</button>
-      <p id="footerNote">日常柜：封签 → 锁杆 → 开门 → 扫光清点</p>
-    </footer>
-  </main>
+  <script src="./src/core/daily-generator.js"></script>
+  <script src="./src/core/game-engine.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

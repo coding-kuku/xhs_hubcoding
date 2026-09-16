@@ -74,7 +74,10 @@ function tierMix(totalAssets) {
 
 function rollMarket() {
   const market = {};
-  const categories = [...new Set(config.itemLibrary.ordinary.map((item) => item.category))];
+  const categories = [...new Set([
+    ...config.itemLibrary.ordinary,
+    ...config.itemLibrary.collectible
+  ].map((item) => item.category))];
   for (const category of categories) {
     const band = pickWeighted(config.marketBands);
     market[category] = between(band.min, band.max);
@@ -92,7 +95,7 @@ function rollRegularContainer(tierName, market) {
     const item = pick(config.itemLibrary[type]);
     const ratio = pickWeighted(config.contentValueBuckets[type]).ratio;
     const neutralValue = closePrice * ratio;
-    const marketMultiplier = type === "ordinary" ? market[item.category] : 1;
+    const marketMultiplier = ["ordinary", "collectible"].includes(type) ? market[item.category] : 1;
     const quickValue = neutralValue * config.instantSaleMultiplier[type] * marketMultiplier;
     items.push({ type, item, neutralValue, quickValue, ratio });
   }
@@ -108,7 +111,7 @@ function rollRegularContainer(tierName, market) {
     const scale = Math.max(0, targetNeutralValue - negativeValue) / rawPositiveValue;
     for (const layerItem of positiveItems) {
       layerItem.neutralValue *= scale;
-      const marketMultiplier = layerItem.type === "ordinary" ? market[layerItem.item.category] : 1;
+      const marketMultiplier = ["ordinary", "collectible"].includes(layerItem.type) ? market[layerItem.item.category] : 1;
       layerItem.quickValue =
         layerItem.neutralValue * config.instantSaleMultiplier[layerItem.type] * marketMultiplier;
     }
@@ -178,11 +181,11 @@ function projectedSignal(container, strategyName) {
 }
 
 function storedSaleValue(item, dayMarket) {
-  if (item.type === "ordinary") {
+  if (["ordinary", "collectible"].includes(item.type)) {
     const favorableMarket = Math.max(dayMarket[item.item.category] || 1, 1.0);
-    return item.neutralValue * Math.min(favorableMarket, 1.05);
+    const baseMultiplier = config.instantSaleMultiplier[item.type];
+    return item.neutralValue * baseMultiplier * Math.min(favorableMarket, 1.05);
   }
-  if (item.type === "collectible") return item.neutralValue * between(0.91, 0.94);
   if (item.type === "fragment") return item.neutralValue * between(0.85, 0.89);
   if (item.type === "trash" && item.item.kind === "oddity" && random() < 0.12) {
     return Math.abs(item.neutralValue) * between(0.6, 1.4);
@@ -220,10 +223,17 @@ function emergencyLiquidateInventory(state) {
   state.inventory = keep;
 }
 
+function inventoryUsed(state) {
+  return state.inventory.reduce(
+    (sum, lot) => sum + Math.max(1, Number(lot.item.item.storageSlots) || 1),
+    0
+  );
+}
+
 function handleSkilledItems(container, state, market) {
   if (container.isFog) {
     const delay = container.assetRatio > container.quickRatio + 0.08 ? Math.ceil(between(2, 7)) : 0;
-    if (delay > 0 && state.inventory.length < config.warehouse.freeSlots) {
+    if (delay > 0 && inventoryUsed(state) < config.warehouse.freeSlots) {
       const synthetic = {
         type: "collectible",
         item: { name: "雾柜暂存物", category: "特殊藏品" },
@@ -254,7 +264,8 @@ function handleSkilledItems(container, state, market) {
       delay = Math.ceil(between(1, 6));
     }
 
-    if (shouldStore && state.inventory.length < config.warehouse.freeSlots) {
+    const slotsNeeded = Math.max(1, Number(item.item.storageSlots) || 1);
+    if (shouldStore && inventoryUsed(state) + slotsNeeded <= config.warehouse.freeSlots) {
       state.inventory.push({ item, sellDay: state.day + delay });
     } else {
       immediate += item.quickValue;

@@ -6,9 +6,11 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function createEngineApi(defaultGenerator) {
   "use strict";
 
-  const VERSION = "1.0.0";
+  const VERSION = "1.1.0";
   const BID_STEPS = { low: 50, medium: 100, high: 200, bonded: 500, legacy: 1000 };
-  const RENT_BY_CAPACITY = { 30: 0, 40: 500, 50: 1300, 60: 2500, 70: 4300, 80: 7000 };
+  const BASE_WAREHOUSE_CAPACITY = 50;
+  const MAX_WAREHOUSE_CAPACITY = 100;
+  const RENT_BY_CAPACITY = { 50: 0, 60: 500, 70: 1300, 80: 2500, 90: 4300, 100: 7000 };
   const SALE_MULTIPLIER = { ordinary: 1, collectible: 0.9, fragment: 0.84, trash: 1 };
 
   function clone(value) {
@@ -71,8 +73,8 @@
       pendingItems: [],
       containerResults: {},
       warehouse: {
-        contractedCapacity: 30,
-        activeCapacity: 30,
+        contractedCapacity: BASE_WAREHOUSE_CAPACITY,
+        activeCapacity: BASE_WAREHOUSE_CAPACITY,
         rentMonth: monthKey(dateKey),
         rentPaidThisMonth: 0,
         lots: []
@@ -91,6 +93,14 @@
     if (!state || state.schemaVersion !== VERSION) fail("存档版本不兼容");
     if (!state.board || !Array.isArray(state.board.containers)) fail("存档缺少每日货柜数据");
     if (!state.warehouse || !Array.isArray(state.warehouse.lots)) fail("存档缺少仓库数据");
+    const contracted = clamp(Number(state.warehouse.contractedCapacity) || BASE_WAREHOUSE_CAPACITY, BASE_WAREHOUSE_CAPACITY, MAX_WAREHOUSE_CAPACITY);
+    const active = clamp(Number(state.warehouse.activeCapacity) || BASE_WAREHOUSE_CAPACITY, BASE_WAREHOUSE_CAPACITY, contracted);
+    state.warehouse.contractedCapacity = contracted;
+    state.warehouse.activeCapacity = active;
+    state.warehouse.rentPaidThisMonth = Math.min(
+      Math.max(0, Number(state.warehouse.rentPaidThisMonth) || 0),
+      RENT_BY_CAPACITY[contracted]
+    );
   }
 
   function createGame(options) {
@@ -310,17 +320,24 @@
       state.phase = "board";
     }
 
-    function warehouseUsed() {
-      return state.warehouse.lots.length;
+  function warehouseUsed() {
+      return state.warehouse.lots.reduce(
+        (sum, lot) => sum + Math.max(1, Number(lot.storageSlots) || Number(lot.count) || 1),
+        0
+      );
     }
 
     function storeItem(item) {
+      const slotsNeeded = Math.max(1, Number(item.storageSlots) || 1);
       const matching = state.warehouse.lots.find(
         (lot) => lot.name === item.name && lot.condition === item.condition && lot.type === item.type
       );
-      if (!matching && warehouseUsed() >= state.warehouse.activeCapacity) fail("仓库已满");
+      if (warehouseUsed() + slotsNeeded > state.warehouse.activeCapacity) {
+        fail(`仓库空间不足，这批货需要 ${slotsNeeded} 个仓位`);
+      }
       if (matching) {
         matching.count += 1;
+        matching.storageSlots = Math.max(1, Number(matching.storageSlots) || 1) + slotsNeeded;
         matching.neutralValue = roundMoney(matching.neutralValue + item.neutralValue);
         matching.originalQuickValue = roundMoney(matching.originalQuickValue + item.quickValue);
       } else {
@@ -331,8 +348,13 @@
           category: item.category,
           set: item.set || null,
           kind: item.kind || null,
+          visualId: item.visualId || null,
+          rarity: item.rarity || "standard",
+          assessment: item.assessment || null,
+          riskProfile: item.riskProfile || null,
           condition: item.condition,
           count: 1,
+          storageSlots: slotsNeeded,
           neutralValue: item.neutralValue,
           originalQuickValue: item.quickValue,
           storedDate: state.dateKey
@@ -348,7 +370,10 @@
         const market = state.board.market.multipliers[lot.category] || 1;
         return roundMoney(lot.neutralValue * market);
       }
-      if (lot.type === "collectible") return roundMoney(lot.neutralValue * SALE_MULTIPLIER.collectible);
+      if (lot.type === "collectible") {
+        const market = state.board.market.multipliers[lot.category] || 1;
+        return roundMoney(lot.neutralValue * SALE_MULTIPLIER.collectible * market);
+      }
       if (lot.type === "fragment") return roundMoney(lot.neutralValue * SALE_MULTIPLIER.fragment);
       return roundMoney(lot.originalQuickValue);
     }
@@ -589,7 +614,7 @@
     function renewWarehouse() {
       assertPhase("board", "inspection", "decision", "disposition");
       const target = state.warehouse.contractedCapacity;
-      if (target <= 30) fail("免费仓库不需要续租");
+      if (target <= BASE_WAREHOUSE_CAPACITY) fail("免费仓库不需要续租");
       const currentMonth = monthKey(state.dateKey);
       const alreadyPaid = state.warehouse.rentMonth === currentMonth
         ? state.warehouse.rentPaidThisMonth
@@ -608,7 +633,7 @@
     function rentWarehouseExpansion() {
       assertPhase("board", "inspection", "decision", "disposition");
       const current = state.warehouse.contractedCapacity;
-      if (current >= 80) fail("仓库已经达到 80 格上限");
+      if (current >= MAX_WAREHOUSE_CAPACITY) fail(`仓库已经达到 ${MAX_WAREHOUSE_CAPACITY} 格上限`);
       if (state.warehouse.activeCapacity < current) fail("请先续租当前仓库");
       const target = current + 10;
       const targetRent = RENT_BY_CAPACITY[target];
@@ -673,10 +698,11 @@
       const dateKey = String(nextDateKey);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) fail("日期必须使用 YYYY-MM-DD 格式");
       if (dateKey === state.dateKey) return getView();
+      if (dateKey < state.dateKey) fail("不能返回已经结束的日期");
 
       const oldMonth = monthKey(state.dateKey);
       const newMonth = monthKey(dateKey);
-      if (oldMonth !== newMonth && state.warehouse.contractedCapacity > 30) {
+      if (oldMonth !== newMonth && state.warehouse.contractedCapacity > BASE_WAREHOUSE_CAPACITY) {
         const rent = RENT_BY_CAPACITY[state.warehouse.contractedCapacity];
         state.warehouse.rentMonth = newMonth;
         state.warehouse.rentPaidThisMonth = 0;
@@ -686,7 +712,7 @@
           state.warehouse.rentPaidThisMonth = rent;
           state.journal.push({ type: "monthlyRent", month: newMonth, capacity: state.warehouse.contractedCapacity, cost: rent });
         } else {
-          state.warehouse.activeCapacity = 30;
+          state.warehouse.activeCapacity = BASE_WAREHOUSE_CAPACITY;
           state.journal.push({ type: "warehouseLocked", month: newMonth, capacity: state.warehouse.contractedCapacity });
         }
       }

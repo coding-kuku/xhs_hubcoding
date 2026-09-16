@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "interaction": {
     "publicClueCount": 2,
     "inspectionChoices": 3,
@@ -27,7 +27,7 @@
     {
       "id": "photo_studio",
       "label": "影像工作室器材",
-      "posteriorTags": ["影像器材", "影像藏品", "空盒与淘汰线材"],
+      "posteriorTags": ["影像器材", "专业设备", "空盒与淘汰线材"],
       "possibleTrap": "专业箱体不等于箱内仍有设备"
     },
     {
@@ -39,19 +39,19 @@
     {
       "id": "stage_tour",
       "label": "巡演舞台物资",
-      "posteriorTags": ["演出器材", "影音藏品", "残缺灯牌与戏服"],
+      "posteriorTags": ["演出器材", "高级时装", "残缺灯牌与戏服"],
       "possibleTrap": "外形夸张的道具通常占位置，却不一定值钱"
     },
     {
       "id": "sports_stock",
       "label": "文体用品库存",
-      "posteriorTags": ["文体库存", "玩具藏品", "残次与单边库存"],
+      "posteriorTags": ["文体库存", "限量球鞋", "残次与单边库存"],
       "possibleTrap": "数量多不代表能够成套出售"
     },
     {
       "id": "personal_effects",
       "label": "未分类私人旧物",
-      "posteriorTags": ["实体藏品", "纸品藏品", "宝藏碎片", "诙谐异物"],
+      "posteriorTags": ["奢侈配饰", "珠宝艺术", "宝藏碎片", "诙谐异物"],
       "possibleTrap": "上限较高，但混装和无用杂物也更多"
     },
     {
@@ -63,8 +63,44 @@
     {
       "id": "old_port_transfer",
       "label": "旧港转运留置物",
-      "posteriorTags": ["航海藏品", "宝藏碎片", "受潮物资"],
+      "posteriorTags": ["复古收藏", "宝藏碎片", "受潮物资"],
       "possibleTrap": "年代感可能来自真正旧物，也可能只是长期滞港"
+    },
+    {
+      "id": "luxury_returns",
+      "label": "精品店退运货",
+      "posteriorTags": ["奢侈配饰", "高级时装", "仿品与缺件"],
+      "possibleTrap": "品牌包装不等于正品，附件和真伪决定实际价值"
+    },
+    {
+      "id": "fashion_transfer",
+      "label": "高级成衣转运货",
+      "posteriorTags": ["高级时装", "纺织库存", "过季与尺码断档"],
+      "possibleTrap": "正品也可能因过季、霉变或尺码不全而大幅折价"
+    },
+    {
+      "id": "production_gear",
+      "label": "影视制作设备",
+      "posteriorTags": ["专业设备", "影像器材", "故障与缺件"],
+      "possibleTrap": "专业箱体可能装着高端设备，也可能只剩损坏机身"
+    },
+    {
+      "id": "gallery_transfer",
+      "label": "画廊转运陈设",
+      "posteriorTags": ["珠宝艺术", "当代艺术", "仿品与包装"],
+      "possibleTrap": "精细包装提高上限，但来源记录和材质仍需核验"
+    },
+    {
+      "id": "vehicle_transfer",
+      "label": "车辆及配套部件",
+      "posteriorTags": ["车辆大奖", "工坊器材", "事故与手续风险"],
+      "possibleTrap": "整车轮廓不代表车况和手续完整，运输处置费也更高"
+    },
+    {
+      "id": "private_collection",
+      "label": "私人收藏寄存物",
+      "posteriorTags": ["奢侈配饰", "珠宝艺术", "复古收藏"],
+      "possibleTrap": "私人收藏提高珍品上限，也可能混入仿品和普通纪念物"
     }
   ],
   "publicExterior": [

@@ -6,7 +6,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function createGeneratorApi() {
   "use strict";
 
-  const VERSION = "1.0.0";
+  const VERSION = "1.1.0";
 
   const TIERS = {
     low: { label: "低价柜", start: [300, 700], close: [500, 1200] },
@@ -70,7 +70,9 @@
 
   const SALE_MULTIPLIER = { ordinary: 1, collectible: 0.9, fragment: 0.84, trash: 1 };
 
-  const MARKET_CATEGORIES = ["商用库存", "影像器材", "工坊器材", "航海用品", "演出器材", "文体库存"];
+  const ORDINARY_MARKET_CATEGORIES = ["商用库存", "影像器材", "工坊器材", "航海用品", "演出器材", "文体库存"];
+  const PREMIUM_MARKET_CATEGORIES = ["奢侈配饰", "高级时装", "专业设备", "珠宝艺术", "车辆大奖", "复古收藏"];
+  const MARKET_CATEGORIES = [...ORDINARY_MARKET_CATEGORIES, ...PREMIUM_MARKET_CATEGORIES];
 
   const ITEMS = {
     ordinary: [
@@ -94,16 +96,24 @@
       { name: "拼装模型库存", category: "文体库存", tags: ["sports", "fragile", "light"] }
     ],
     collectible: [
-      { name: "老式旁轴相机", category: "影像藏品", tags: ["photo", "personal", "fragile", "dense"] },
-      { name: "机械打字机", category: "办公藏品", tags: ["personal", "dense", "metal"] },
-      { name: "开盘录音机", category: "影音藏品", tags: ["photo", "stage", "heavy", "fragile"] },
-      { name: "黄铜船钟", category: "航海藏品", tags: ["port", "oldPort", "dense", "metal"] },
-      { name: "老船罗盘", category: "航海藏品", tags: ["port", "oldPort", "fragile", "metal"] },
-      { name: "车钟传令器", category: "航海藏品", tags: ["port", "oldPort", "heavy", "metal"] },
-      { name: "试压版唱片", category: "影音藏品", tags: ["stage", "personal", "fragile", "light"] },
-      { name: "手绘港口海报", category: "纸品藏品", tags: ["stage", "oldPort", "personal", "paper", "light"] },
-      { name: "铁皮玩具样机", category: "玩具藏品", tags: ["sports", "personal", "metal"] },
-      { name: "旧旅馆钥匙板", category: "陈设藏品", tags: ["hotel", "personal", "heavy"] }
+      { name: "瑞士陀飞轮腕表", category: "奢侈配饰", visualId: "luxury-0", riskProfile: "auth", storageSlots: 1, tags: ["luxury", "personal", "fragile", "dense"] },
+      { name: "满钻高级腕表", category: "奢侈配饰", visualId: "luxury-1", riskProfile: "auth", storageSlots: 1, tags: ["luxury", "personal", "fragile", "dense"] },
+      { name: "手工头层皮包", category: "奢侈配饰", visualId: "luxury-2", riskProfile: "auth", storageSlots: 1, tags: ["luxury", "fashion", "personal", "light"] },
+      { name: "高级旅行箱", category: "奢侈配饰", visualId: "luxury-3", riskProfile: "auth", storageSlots: 2, tags: ["luxury", "fashion", "bulky"] },
+      { name: "设计师礼服整批", category: "高级时装", visualId: "luxury-4", riskProfile: "fashion", storageSlots: 3, quantity: "1 整架", tags: ["fashion", "textile", "bulky"] },
+      { name: "限量球鞋批货", category: "高级时装", visualId: "luxury-5", riskProfile: "fashion", storageSlots: 2, quantity: "6 双", tags: ["fashion", "sports", "bulky"] },
+      { name: "精品羊绒大衣", category: "高级时装", visualId: "luxury-6", riskProfile: "fashion", storageSlots: 3, quantity: "5 件", tags: ["fashion", "textile", "bulky"] },
+      { name: "设计师眼镜陈列盘", category: "高级时装", visualId: "luxury-7", riskProfile: "fashion", storageSlots: 2, quantity: "8 副", tags: ["fashion", "fragile", "light"] },
+      { name: "数字电影摄影机", category: "专业设备", visualId: "luxury-8", riskProfile: "equipment", storageSlots: 2, tags: ["professional", "photo", "fragile", "dense"] },
+      { name: "广播级变焦镜头", category: "专业设备", visualId: "premium-0", riskProfile: "equipment", storageSlots: 2, tags: ["professional", "photo", "fragile", "dense"] },
+      { name: "专业电影无人机套装", category: "专业设备", visualId: "premium-1", riskProfile: "equipment", storageSlots: 3, tags: ["professional", "photo", "fragile"] },
+      { name: "旗舰落地音箱对箱", category: "专业设备", visualId: "premium-2", riskProfile: "equipment", storageSlots: 4, quantity: "1 对", tags: ["professional", "stage", "heavy", "fragile"] },
+      { name: "钻石珠宝套装", category: "珠宝艺术", visualId: "premium-3", riskProfile: "art", storageSlots: 1, tags: ["art", "luxury", "personal", "dense"] },
+      { name: "足金现代摆件", category: "珠宝艺术", visualId: "premium-4", riskProfile: "art", storageSlots: 1, tags: ["art", "luxury", "metal", "dense"] },
+      { name: "当代限量版画", category: "珠宝艺术", visualId: "premium-5", riskProfile: "art", storageSlots: 2, tags: ["art", "paper", "fragile", "light"] },
+      { name: "当代琉璃雕塑", category: "珠宝艺术", visualId: "premium-6", riskProfile: "art", storageSlots: 2, tags: ["art", "fragile", "heavy"] },
+      { name: "老式旁轴相机", category: "复古收藏", visualId: "vintage-0", riskProfile: "vintage", storageSlots: 1, tags: ["vintage", "photo", "personal", "fragile", "dense"] },
+      { name: "老船罗盘", category: "复古收藏", visualId: "vintage-4", riskProfile: "vintage", storageSlots: 1, tags: ["vintage", "port", "oldPort", "fragile", "metal"] }
     ],
     fragment: [
       { name: "沉船航海图·西北角", set: "沉船航海图", tags: ["oldPort", "personal", "paper", "light"] },
@@ -141,6 +151,11 @@
     ]
   };
 
+  const JACKPOT_ITEMS = [
+    { name: "高性能中置跑车", category: "车辆大奖", visualId: "premium-7", riskProfile: "vehicle", storageSlots: 10, quantity: "1 辆", isVehicle: true, tags: ["vehicle", "luxury", "heavy", "dense"] },
+    { name: "稀有高性能摩托", category: "车辆大奖", visualId: "premium-8", riskProfile: "vehicle", storageSlots: 6, quantity: "1 辆", isVehicle: true, tags: ["vehicle", "luxury", "heavy", "dense"] }
+  ];
+
   const MANIFESTS = [
     { id: "hotel_clearance", label: "旅店清仓物资", tags: ["hotel"] },
     { id: "photo_studio", label: "影像工作室器材", tags: ["photo"] },
@@ -149,7 +164,13 @@
     { id: "sports_stock", label: "文体用品库存", tags: ["sports"] },
     { id: "personal_effects", label: "未分类私人旧物", tags: ["personal"] },
     { id: "warehouse_returns", label: "仓储退运杂货", tags: ["warehouse", "mismatch"] },
-    { id: "old_port_transfer", label: "旧港转运留置物", tags: ["oldPort", "port"] }
+    { id: "old_port_transfer", label: "旧港转运留置物", tags: ["oldPort", "port", "vintage"] },
+    { id: "luxury_returns", label: "精品店退运货", tags: ["luxury", "fashion"] },
+    { id: "fashion_transfer", label: "高级成衣转运货", tags: ["fashion", "textile"] },
+    { id: "production_gear", label: "影视制作设备", tags: ["professional", "photo"] },
+    { id: "gallery_transfer", label: "画廊转运陈设", tags: ["art", "fragile"] },
+    { id: "vehicle_transfer", label: "车辆及配套部件", tags: ["vehicle", "heavy"] },
+    { id: "private_collection", label: "私人收藏寄存物", tags: ["luxury", "art", "vintage", "personal"] }
   ];
 
   const EXTERIORS = [
@@ -318,8 +339,14 @@
       multipliers[category] = Number(between(random, range[0], range[1]).toFixed(3));
     }
     const sorted = Object.entries(multipliers).sort((a, b) => b[1] - a[1]);
+    const featuredCategories = [...new Set([
+      sorted[0][0],
+      sorted[sorted.length - 1][0],
+      ...ordered
+    ])].slice(0, 6);
     return {
       multipliers,
+      featuredCategories,
       headlineUp: sorted[0][0],
       headlineDown: sorted[sorted.length - 1][0]
     };
@@ -337,11 +364,83 @@
     return pick(random, byOutcome[outcomeId] || byOutcome.nearEven);
   }
 
-  function quantityLabel(random, type) {
+  function quantityLabel(random, type, source) {
+    if (source && source.quantity) return source.quantity;
     if (type === "ordinary") return pick(random, ["1 批", "2 箱", "3 箱", "成套"]);
     if (type === "fragment") return "1 片";
     if (type === "trash") return pick(random, ["1 堆", "1 批", "塞满一角"]);
     return "1 件";
+  }
+
+  function collectibleAssessment(random, source, outcomeId) {
+    const level = outcomeId === "severeLoss" ? 0
+      : outcomeId === "loss" ? 1
+        : outcomeId === "nearEven" ? 2
+          : outcomeId === "profit" ? 3
+            : 4;
+    const profiles = {
+      auth: [
+        ["高仿货，材质检测不符", "仿品"],
+        ["真伪存疑，附件缺失", "存疑"],
+        ["确认正品，但缺盒证", "一般"],
+        ["确认正品，附件基本齐全", "良好"],
+        ["正品全套，编号与证书一致", "完整"]
+      ],
+      fashion: [
+        ["霉变并混入大量仿品", "重损"],
+        ["部分仿品，尺码严重断档", "残旧"],
+        ["确认正品，但款式过季", "一般"],
+        ["正品居多，吊牌基本完整", "良好"],
+        ["当季正品整批，尺码齐全", "完整"]
+      ],
+      equipment: [
+        ["核心故障，维修价值很低", "重损"],
+        ["无法完整开机，缺关键配件", "残旧"],
+        ["功能可用，耗材与附件不全", "一般"],
+        ["通过测试，仅有轻微使用痕迹", "良好"],
+        ["低使用时长，原装附件齐全", "完整"]
+      ],
+      art: [
+        ["材质与申报不符，基本无收藏价值", "仿品"],
+        ["来源记录断裂，市场认可度很低", "存疑"],
+        ["材质确认，作者或批次仍待核验", "一般"],
+        ["附工作室或检测文件", "良好"],
+        ["来源完整，可追溯且品相上佳", "完整"]
+      ],
+      vintage: [
+        ["大量后配件，核心结构损坏", "重损"],
+        ["翻修痕迹明显，真伪存疑", "残旧"],
+        ["主体原装，功能需要保养", "一般"],
+        ["原装度较高，功能正常", "良好"],
+        ["罕见原装全套，保存完整", "完整"]
+      ],
+      vehicle: [
+        ["泡水事故车，无有效手续", "报废"],
+        ["事故修复痕迹重，缺钥匙或手续", "重损"],
+        ["可以启动，但手续或保养记录不全", "一般"],
+        ["车况良好，手续可以补齐", "良好"],
+        ["低里程完整车况，钥匙手续齐全", "完整"]
+      ]
+    };
+    const profile = profiles[source.riskProfile] || profiles.vintage;
+    const row = profile[level];
+    return { assessment: row[0], condition: row[1] };
+  }
+
+  function itemRarity(item, expectedClose) {
+    if (item.isVehicle) return "legendary";
+    if (item.type === "fragment") return "fragment";
+    if (item.type !== "collectible") return item.type === "trash" ? "junk" : "standard";
+    const ratio = expectedClose > 0 ? item.neutralValue / expectedClose : 0;
+    if (ratio >= 1.8) return "legendary";
+    if (ratio >= 0.9) return "epic";
+    if (ratio >= 0.45) return "rare";
+    return "premium";
+  }
+
+  function sourceForType(random, type, vehicleItem) {
+    if (type === "collectible" && vehicleItem) return vehicleItem;
+    return pick(random, ITEMS[type]);
   }
 
   function chooseManifest(random, items) {
@@ -428,13 +527,18 @@
     );
     let outcome = pickWeighted(random, OUTCOME_BANDS);
     const layers = [];
+    const vehicleEligible = ["high", "bonded", "legacy"].includes(tierId);
+    const vehicleItem = vehicleEligible && random() < 0.025 ? pick(random, JACKPOT_ITEMS) : null;
+    const vehicleLayer = vehicleItem ? Math.floor(random() * 3) : -1;
 
     for (let layerIndex = 0; layerIndex < 3; layerIndex += 1) {
-      const type = pickWeighted(random, TYPE_WEIGHTS).id;
-      const source = pick(random, ITEMS[type]);
+      const type = layerIndex === vehicleLayer ? "collectible" : pickWeighted(random, TYPE_WEIGHTS).id;
+      const source = sourceForType(random, type, layerIndex === vehicleLayer ? vehicleItem : null);
       const ratio = pickWeighted(random, VALUE_BUCKETS[type]).ratio;
       const neutralValue = expectedClose * ratio;
-      const marketMultiplier = type === "ordinary" ? market.multipliers[source.category] : 1;
+      const marketMultiplier = type === "ordinary" || type === "collectible"
+        ? market.multipliers[source.category] || 1
+        : 1;
       layers.push({
         layer: layerIndex + 1,
         type,
@@ -442,8 +546,12 @@
         category: source.category || source.set || source.kind,
         set: source.set || null,
         kind: source.kind || null,
+        visualId: source.visualId || null,
+        riskProfile: source.riskProfile || null,
+        storageSlots: source.storageSlots || 1,
+        isVehicle: Boolean(source.isVehicle),
         tags: source.tags.slice(),
-        quantity: quantityLabel(random, type),
+        quantity: quantityLabel(random, type, source),
         neutralValue,
         quickValue: neutralValue * SALE_MULTIPLIER[type] * marketMultiplier
       });
@@ -461,13 +569,25 @@
       const positiveScale = Math.max(0, targetValue - negativeValue) / rawPositive;
       for (const item of positive) {
         item.neutralValue *= positiveScale;
-        const multiplier = item.type === "ordinary" ? market.multipliers[item.category] : 1;
+        const multiplier = item.type === "ordinary" || item.type === "collectible"
+          ? market.multipliers[item.category] || 1
+          : 1;
         item.quickValue = item.neutralValue * SALE_MULTIPLIER[item.type] * multiplier;
       }
     }
 
     for (const item of layers) {
-      item.condition = rollCondition(random, outcome.id);
+      if (item.type === "collectible") {
+        const assessed = collectibleAssessment(random, item, outcome.id);
+        item.condition = assessed.condition;
+        item.assessment = assessed.assessment;
+      } else {
+        item.condition = rollCondition(random, outcome.id);
+        item.assessment = null;
+      }
+      item.handlingFee = item.isVehicle ? roundMoney(expectedClose * (outcome.id === "severeLoss" ? 0.18 : 0.08)) : 0;
+      item.quickValue -= item.handlingFee;
+      item.rarity = itemRarity(item, expectedClose);
       item.neutralValue = roundMoney(item.neutralValue);
       item.quickValue = roundMoney(item.quickValue);
       item.cleanupFee = item.quickValue < 0 ? Math.abs(item.quickValue) : 0;
@@ -503,26 +623,37 @@
     };
   }
 
-  function fogItemForOutcome(random, outcome) {
+  function fogItemForOutcome(random, outcome, tierId) {
     if (outcome.id === "empty") {
       return { name: "积水与空托盘", category: "处置垃圾", kind: "disposal", tags: ["wet", "warehouse", "light"] };
     }
     const type = outcome.type || pick(random, outcome.types);
+    if (type === "collectible" && ["high", "bonded", "legacy"].includes(tierId)) {
+      const vehicleChance = outcome.id === "jackpot" ? 0.35 : outcome.id === "bigProfit" ? 0.08 : 0;
+      if (random() < vehicleChance) return { ...pick(random, JACKPOT_ITEMS), type };
+    }
     const source = pick(random, ITEMS[type]);
     return { ...source, type };
   }
 
-  function generateFogContainer(random, tierId, index) {
+  function generateFogContainer(random, tierId, index, market) {
     const tier = TIERS[tierId];
     const startingBid = roundMoney(between(random, tier.start[0], tier.start[1]));
     const expectedClose = roundMoney(
       Math.max(between(random, tier.close[0], tier.close[1]), startingBid * 1.1)
     );
     const outcome = pickWeighted(random, FOG_OUTCOMES);
-    const source = fogItemForOutcome(random, outcome);
+    const source = fogItemForOutcome(random, outcome, tierId);
     const type = source.type || "trash";
     const neutralValue = roundMoney(expectedClose * outcome.assetRatio);
-    const quickValue = roundMoney(expectedClose * outcome.quickRatio);
+    const marketMultiplier = type === "ordinary" || type === "collectible"
+      ? market.multipliers[source.category] || 1
+      : 1;
+    const handlingFee = source.isVehicle ? roundMoney(expectedClose * (outcome.id === "loss" ? 0.16 : 0.08)) : 0;
+    const quickValue = roundMoney(expectedClose * outcome.quickRatio * marketMultiplier - handlingFee);
+    const fogAssessment = type === "collectible"
+      ? collectibleAssessment(random, source, outcome.id === "nearEmpty" ? "loss" : outcome.id)
+      : null;
     const layers = outcome.id === "empty"
       ? []
       : [{
@@ -532,11 +663,18 @@
           category: source.category || source.set || source.kind,
           set: source.set || null,
           kind: source.kind || null,
+          visualId: source.visualId || null,
+          riskProfile: source.riskProfile || null,
+          storageSlots: source.storageSlots || 1,
+          isVehicle: Boolean(source.isVehicle),
           tags: source.tags.slice(),
-          quantity: quantityLabel(random, type),
-          condition: rollCondition(random, outcome.id === "nearEmpty" ? "loss" : "nearEven"),
+          quantity: quantityLabel(random, type, source),
+          condition: fogAssessment ? fogAssessment.condition : rollCondition(random, outcome.id === "nearEmpty" ? "loss" : "nearEven"),
+          assessment: fogAssessment ? fogAssessment.assessment : null,
+          rarity: source.isVehicle ? "legendary" : outcome.id === "jackpot" ? "legendary" : outcome.id === "bigProfit" ? "epic" : type === "collectible" ? "rare" : type,
           neutralValue,
           quickValue,
+          handlingFee,
           cleanupFee: quickValue < 0 ? Math.abs(quickValue) : 0
         }];
     const cluePool = [
@@ -624,10 +762,8 @@
   function rollMerchant(random) {
     if (random() >= 0.48) return null;
     const targets = [
-      ...MARKET_CATEGORIES.map((category) => ({ type: "ordinary", category })),
-      { type: "collectible", category: "航海藏品" },
-      { type: "collectible", category: "影音藏品" },
-      { type: "collectible", category: "影像藏品" },
+      ...ORDINARY_MARKET_CATEGORIES.map((category) => ({ type: "ordinary", category })),
+      ...PREMIUM_MARKET_CATEGORIES.map((category) => ({ type: "collectible", category })),
       { type: "fragment", category: "宝藏碎片" },
       { type: "trash", category: "诙谐异物" }
     ];
@@ -666,7 +802,7 @@
     const fogIndex = fogCandidates.length ? pick(random, fogCandidates) : -1;
     const containers = mix.map((tierId, index) =>
       index === fogIndex
-        ? generateFogContainer(random, tierId, index)
+        ? generateFogContainer(random, tierId, index, market)
         : generateRegularContainer(random, tierId, index, market)
     );
 

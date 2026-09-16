@@ -17,7 +17,7 @@
 
 - `ui-style-v3.svg` / `ui-style-v3.png`：最新版方向参考，仍需结合用户反馈继续迭代。
 - `ui-style-v2.svg` / `ui-style-v2.png`：上一版方向，保留用于比较，不作为最终规范。
-- 根目录 `index.html`：最新版开仓交互样机。
+- 根目录 `index.html`：当前完整可玩版本；历史交互样机保存在 `prototypes/archive/`。
 
 ## 页面清单
 
@@ -38,4 +38,3 @@
 - 重要文字不直接压在复杂图片上。
 - 金额变化、亏损和清理费必须有明确正负反馈。
 - 低端手机上动画不卡住主流程；尊重 `prefers-reduced-motion`。
-

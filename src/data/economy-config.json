@@ -1,7 +1,7 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "startingCash": 6000,
-  "startingWarehouseSlots": 30,
+  "startingWarehouseSlots": 50,
   "dailyBoard": {
     "slots": 5,
     "maxAuctions": 5,
@@ -42,15 +42,15 @@
     { "name": "strongUp", "probability": 0.05, "min": 1.15, "max": 1.20 }
   ],
   "warehouse": {
-    "freeSlots": 30,
-    "hardCap": 80,
+    "freeSlots": 50,
+    "hardCap": 100,
     "expansionStep": 10,
     "monthlyRent": {
-      "40": 500,
-      "50": 1300,
-      "60": 2500,
-      "70": 4300,
-      "80": 7000
+      "60": 500,
+      "70": 1300,
+      "80": 2500,
+      "90": 4300,
+      "100": 7000
     }
   },
   "recovery": {
@@ -124,16 +124,28 @@
       { "name": "拼装模型库存", "category": "文体库存" }
     ],
     "collectible": [
-      { "name": "老式旁轴相机", "category": "影像藏品" },
-      { "name": "机械打字机", "category": "办公藏品" },
-      { "name": "开盘录音机", "category": "影音藏品" },
-      { "name": "黄铜船钟", "category": "航海藏品" },
-      { "name": "老船罗盘", "category": "航海藏品" },
-      { "name": "车钟传令器", "category": "航海藏品" },
-      { "name": "试压版唱片", "category": "影音藏品" },
-      { "name": "手绘港口海报", "category": "纸品藏品" },
-      { "name": "铁皮玩具样机", "category": "玩具藏品" },
-      { "name": "旧旅馆钥匙板", "category": "陈设藏品" }
+      { "name": "瑞士陀飞轮腕表", "category": "奢侈配饰", "storageSlots": 1 },
+      { "name": "满钻高级腕表", "category": "奢侈配饰", "storageSlots": 1 },
+      { "name": "手工头层皮包", "category": "奢侈配饰", "storageSlots": 1 },
+      { "name": "高级旅行箱", "category": "奢侈配饰", "storageSlots": 2 },
+      { "name": "设计师礼服整批", "category": "高级时装", "storageSlots": 3 },
+      { "name": "限量球鞋批货", "category": "高级时装", "storageSlots": 2 },
+      { "name": "精品羊绒大衣", "category": "高级时装", "storageSlots": 3 },
+      { "name": "设计师眼镜陈列盘", "category": "高级时装", "storageSlots": 2 },
+      { "name": "数字电影摄影机", "category": "专业设备", "storageSlots": 2 },
+      { "name": "广播级变焦镜头", "category": "专业设备", "storageSlots": 2 },
+      { "name": "专业电影无人机套装", "category": "专业设备", "storageSlots": 3 },
+      { "name": "旗舰落地音箱对箱", "category": "专业设备", "storageSlots": 4 },
+      { "name": "钻石珠宝套装", "category": "珠宝艺术", "storageSlots": 1 },
+      { "name": "足金现代摆件", "category": "珠宝艺术", "storageSlots": 1 },
+      { "name": "当代限量版画", "category": "珠宝艺术", "storageSlots": 2 },
+      { "name": "当代琉璃雕塑", "category": "珠宝艺术", "storageSlots": 2 },
+      { "name": "老式旁轴相机", "category": "复古收藏", "storageSlots": 1 },
+      { "name": "老船罗盘", "category": "复古收藏", "storageSlots": 1 }
+    ],
+    "jackpot": [
+      { "name": "高性能中置跑车", "category": "车辆大奖", "storageSlots": 10 },
+      { "name": "稀有高性能摩托", "category": "车辆大奖", "storageSlots": 6 }
     ],
     "fragment": [
       { "name": "沉船航海图·西北角", "set": "沉船航海图" },
@@ -173,7 +185,7 @@
   "strategies": {
     "blind": {
       "label": "盲拍即卖",
-      "maxDailyAuctions": 3,
+      "maxDailyAuctions": 5,
       "minimumSignal": -99,
       "fallbackSignal": -99,
       "bidPremiumMin": 1.04,
@@ -184,7 +196,7 @@
     },
     "aware": {
       "label": "看线索会收手",
-      "maxDailyAuctions": 3,
+      "maxDailyAuctions": 5,
       "minimumSignal": 0.99,
       "fallbackSignal": 0.90,
       "bidPremiumMin": 1.01,
@@ -195,7 +207,7 @@
     },
     "skilled": {
       "label": "熟练经营",
-      "maxDailyAuctions": 3,
+      "maxDailyAuctions": 5,
       "minimumSignal": 1.0,
       "fallbackSignal": 0.95,
       "bidPremiumMin": 1.00,
