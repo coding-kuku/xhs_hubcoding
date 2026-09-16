@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071d2b">
+  <title>港口开仓｜核心玩法切片</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="game-shell" aria-live="polite">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">临港打捞拍卖</p>
+        <h1>港口开仓</h1>
+      </div>
+      <div class="stat-row" aria-label="当前状态">
+        <div class="stat">
+          <span>周转金</span>
+          <strong id="money-stat">¥6,000</strong>
+        </div>
+        <div class="stat">
+          <span>热度</span>
+          <strong id="heat-stat">0</strong>
+        </div>
+        <div class="stat">
+          <span>收藏</span>
+          <strong id="collection-stat">0</strong>
+        </div>
+      </div>
+    </header>
+
+    <section id="intro-screen" class="screen is-active">
+      <div class="hero-card">
+        <div class="hero-badge">台风后第一场打捞拍卖</div>
+        <h2>一只未知货柜，三锤定输赢</h2>
+        <p>风暴打捞柜只准看一眼。带着一条线索，与老陈和阿强三锤定价；拍中之后，是宝还是坑才揭晓。</p>
+        <div class="rule-strip">
+          <span>看货</span>
+          <i></i>
+          <span>竞拍</span>
+          <i></i>
+          <span>开仓</span>
+          <i></i>
+          <span>卖或藏</span>
+        </div>
+        <button id="start-button" class="primary-button" type="button">立即看柜</button>
+      </div>
+      <p class="microcopy">货物开拍前已封存，对手也只能根据线索猜价。本次为单柜挑战，重试会重置资金。</p>
+    </section>
+
+    <section id="inspect-screen" class="screen">
+      <div class="phase-heading">
+        <div>
+          <p class="eyebrow">看货 · 只能深查一处</p>
+          <h2 id="container-name">17号打捞柜</h2>
+        </div>
+        <span id="opening-bid-chip" class="price-chip">起拍 ¥800</span>
+      </div>
+
+      <div class="container-stage" aria-hidden="true">
+        <div class="crane-line"></div>
+        <div id="preview-container" class="container-visual preview-container">
+          <div class="container-ribs"></div>
+          <div class="container-label">PORT<br><strong id="container-code">S-017</strong></div>
+          <div class="rust rust-one"></div>
+          <div class="rust rust-two"></div>
+        </div>
+        <div class="waterline"></div>
+      </div>
+
+      <div class="manifest-card">
+        <span>公开货单</span>
+        <strong id="manifest-text">旧办公设备 · 部分受潮</strong>
+      </div>
+
+      <p class="choice-prompt">再查一处，之后立即开拍：</p>
+      <div id="inspection-actions" class="action-grid"></div>
+      <div id="inspection-result" class="clue-result" hidden></div>
+      <button id="enter-auction-button" class="primary-button" type="button" hidden>带着线索入场</button>
+    </section>
+
+    <section id="auction-screen" class="screen">
+      <div class="phase-heading compact">
+        <div>
+          <p class="eyebrow">三锤竞价</p>
+          <h2 id="round-title">第一锤 · 试探</h2>
+        </div>
+        <div class="round-dots" aria-label="竞价轮次">
+          <span class="is-current"></span><span></span><span></span>
+        </div>
+      </div>
+
+      <div class="auction-board">
+        <p>当前公开价</p>
+        <strong id="current-price">¥800</strong>
+        <span id="current-leader">拍卖师等待第一口价</span>
+      </div>
+
+      <div id="npc-row" class="npc-row"></div>
+
+      <div id="auction-log" class="auction-log">拍卖师：第一锤，谁先举牌？</div>
+
+      <div class="bid-actions">
+        <button id="follow-button" class="bid-button follow" type="button">
+          <span>稳跟</span>
+          <strong id="follow-price">¥1,000</strong>
+        </button>
+        <button id="jump-button" class="bid-button jump" type="button">
+          <span>跳价压场</span>
+          <strong id="jump-price">¥1,400</strong>
+        </button>
+        <button id="fold-button" class="text-button" type="button">放弃，让他们拍</button>
+      </div>
+      <p class="microcopy">每锤只能稳跟、跳价或放手；没有自由加价。最后一锤暗标，同价先看守擂，否则抽签。</p>
+    </section>
+
+    <section id="opening-screen" class="screen">
+      <div class="phase-heading compact">
+        <div>
+          <p id="opening-kicker" class="eyebrow">落槌 · 货柜归你</p>
+          <h2 id="opening-title">亲手开仓</h2>
+        </div>
+        <span id="winning-price-chip" class="price-chip">成交 ¥0</span>
+      </div>
+
+      <div id="opening-stage" class="opening-stage">
+        <div id="door-container" class="container-visual door-container">
+          <div class="cargo-darkness"></div>
+          <div class="door door-left"><span></span></div>
+          <div class="door door-right"><span></span></div>
+          <div id="seal-track" class="seal-track">
+            <div id="seal-handle" class="seal-handle" role="button" tabindex="0" aria-label="向下拖动或点按封条">↓</div>
+          </div>
+        </div>
+        <p id="drag-hint" class="gesture-hint">按住封条向下拖，或点一下</p>
+      </div>
+
+      <div id="reveal-area" class="reveal-area" hidden>
+        <div id="loot-stack" class="loot-stack"></div>
+        <button id="reveal-button" class="primary-button" type="button">掀开第一层</button>
+      </div>
+    </section>
+
+    <section id="decision-screen" class="screen">
+      <div class="phase-heading compact">
+        <div>
+          <p class="eyebrow">核心物品</p>
+          <h2>卖掉，还是留下？</h2>
+        </div>
+      </div>
+
+      <article id="featured-item-card" class="featured-item-card"></article>
+      <div id="bulk-summary" class="bulk-summary"></div>
+
+      <div class="decision-actions">
+        <button id="sell-button" class="primary-button" type="button">全部出售</button>
+        <button id="collect-button" class="secondary-button" type="button">收藏压轴物</button>
+      </div>
+      <p class="microcopy">本切片只记录实物收藏；收藏会放弃该物品的出售收入。</p>
+    </section>
+
+    <section id="result-screen" class="screen">
+      <div id="result-card" class="result-card">
+        <p id="result-kicker" class="eyebrow">本柜战报</p>
+        <h2 id="result-title">第一锤，小赚离场</h2>
+        <div id="result-equation" class="result-equation"></div>
+        <p id="result-story" class="result-story"></p>
+        <div id="result-tags" class="result-tags"></div>
+      </div>
+
+      <button id="retry-button" class="primary-button" type="button">重置资金，换一只柜</button>
+      <button id="back-button" class="text-button" type="button">返回说明</button>
+    </section>
+
+    <aside id="live-ticker" class="live-ticker">
+      <span class="live-dot"></span>
+      <p id="live-message">直播间：港口信号已接通</p>
+    </aside>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

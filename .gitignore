@@ -1,0 +1,27 @@
+# Browser automation profiles may contain cookies, history and login state.
+**/*-profile*/
+**/*profile*/
+**/Crashpad/
+**/Cache/
+**/Code Cache/
+**/GPUCache/
+**/ShaderCache/
+**/Service Worker/
+*.dmp
+
+# Generated verification output.
+reports/*-latest.json
+coverage/
+
+# Generated archives and local release staging.
+*.zip
+release/
+dist/
+
+# Editor and operating-system files.
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
