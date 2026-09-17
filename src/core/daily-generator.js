@@ -6,14 +6,14 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function createGeneratorApi() {
   "use strict";
 
-  const VERSION = "1.1.0";
+  const VERSION = "1.2.0";
 
   const TIERS = {
-    low: { label: "低价柜", start: [300, 700], close: [500, 1200] },
-    medium: { label: "中价柜", start: [800, 1500], close: [1200, 2600] },
-    high: { label: "高价柜", start: [1800, 2800], close: [2600, 4200] },
-    bonded: { label: "保税柜", start: [4500, 7000], close: [6000, 10000] },
-    legacy: { label: "远洋遗存柜", start: [10000, 18000], close: [15000, 26000] }
+    low: { label: "低价柜", start: [200, 450], close: [500, 950] },
+    medium: { label: "中价柜", start: [900, 1500], close: [1450, 2850] },
+    high: { label: "高价柜", start: [2400, 3600], close: [4000, 6800] },
+    bonded: { label: "保税柜", start: [4000, 6500], close: [6000, 10000] },
+    legacy: { label: "远洋遗存柜", start: [6000, 9000], close: [9000, 15000] }
   };
 
   const TIER_MIX = {
@@ -22,57 +22,106 @@
     legacy: ["low", "medium", "high", "bonded", "legacy"]
   };
 
-  const TYPE_WEIGHTS = [
-    { id: "ordinary", weight: 0.35 },
-    { id: "collectible", weight: 0.35 },
-    { id: "fragment", weight: 0.15 },
-    { id: "trash", weight: 0.15 }
-  ];
-
-  const OUTCOME_BANDS = [
-    { id: "severeLoss", label: "惨亏", weight: 0.08, range: [0.05, 0.35] },
-    { id: "loss", label: "普通亏损", weight: 0.22, range: [0.50, 0.85] },
-    { id: "nearEven", label: "接近回本", weight: 0.25, range: [0.95, 1.20] },
-    { id: "profit", label: "普通盈利", weight: 0.33, range: [1.18, 1.38] },
-    { id: "bigProfit", label: "大赚", weight: 0.10, range: [1.60, 2.20] },
-    { id: "jackpot", label: "爆仓", weight: 0.02, range: [2.80, 4.20] }
-  ];
-
-  const VALUE_BUCKETS = {
-    ordinary: [
-      { weight: 0.18, ratio: 0.12 },
-      { weight: 0.36, ratio: 0.24 },
-      { weight: 0.29, ratio: 0.45 },
-      { weight: 0.14, ratio: 0.85 },
-      { weight: 0.03, ratio: 1.50 }
+  const TYPE_WEIGHTS = {
+    low: [
+      { id: "ordinary", weight: 0.52 },
+      { id: "collectible", weight: 0.15 },
+      { id: "fragment", weight: 0.08 },
+      { id: "trash", weight: 0.25 }
     ],
-    collectible: [
-      { weight: 0.22, ratio: 0.12 },
-      { weight: 0.38, ratio: 0.30 },
-      { weight: 0.26, ratio: 0.65 },
-      { weight: 0.115, ratio: 1.50 },
-      { weight: 0.025, ratio: 3.80 }
+    medium: [
+      { id: "ordinary", weight: 0.44 },
+      { id: "collectible", weight: 0.27 },
+      { id: "fragment", weight: 0.13 },
+      { id: "trash", weight: 0.16 }
     ],
-    fragment: [
-      { weight: 0.23, ratio: 0.10 },
-      { weight: 0.40, ratio: 0.28 },
-      { weight: 0.25, ratio: 0.60 },
-      { weight: 0.10, ratio: 1.35 },
-      { weight: 0.02, ratio: 3.20 }
+    high: [
+      { id: "ordinary", weight: 0.34 },
+      { id: "collectible", weight: 0.40 },
+      { id: "fragment", weight: 0.16 },
+      { id: "trash", weight: 0.10 }
     ],
-    trash: [
-      { weight: 0.25, ratio: -0.03 },
-      { weight: 0.38, ratio: -0.08 },
-      { weight: 0.27, ratio: -0.18 },
-      { weight: 0.10, ratio: -0.40 }
+    bonded: [
+      { id: "ordinary", weight: 0.28 },
+      { id: "collectible", weight: 0.48 },
+      { id: "fragment", weight: 0.16 },
+      { id: "trash", weight: 0.08 }
+    ],
+    legacy: [
+      { id: "ordinary", weight: 0.22 },
+      { id: "collectible", weight: 0.55 },
+      { id: "fragment", weight: 0.17 },
+      { id: "trash", weight: 0.06 }
     ]
   };
+
+  const OUTCOME_THRESHOLDS = [
+    { id: "severeLoss", label: "惨亏", maxRatio: 0.35 },
+    { id: "loss", label: "普通亏损", maxRatio: 0.85 },
+    { id: "nearEven", label: "接近回本", maxRatio: 1.15 },
+    { id: "profit", label: "普通盈利", maxRatio: 1.55 },
+    { id: "bigProfit", label: "大赚", maxRatio: 2.50 },
+    { id: "jackpot", label: "爆仓", maxRatio: Infinity }
+  ];
+
+  const CONDITION_MULTIPLIERS = {
+    ordinary: { "完整": 1.10, "良好": 0.92, "一般": 0.70, "残旧": 0.42, "重损": 0.18, "报废": 0.04 },
+    collectible: { invalid: 0.04, suspect: 0.28, fair: 0.62, good: 0.92, complete: 1.18 },
+    fragment: { "完整": 1.05, "良好": 0.92, "一般": 0.74, "残旧": 0.52, "重损": 0.30, "报废": 0.12 }
+  };
+
+  const CONDITION_WEIGHTS = {
+    low: {
+      ordinary: [0.01, 0.06, 0.23, 0.34, 0.25, 0.11],
+      collectible: [0.62, 0.28, 0.08, 0.018, 0.002],
+      fragment: [0.03, 0.12, 0.31, 0.32, 0.18, 0.04]
+    },
+    medium: {
+      ordinary: [0.04, 0.16, 0.32, 0.29, 0.14, 0.05],
+      collectible: [0.30, 0.30, 0.27, 0.105, 0.025],
+      fragment: [0.08, 0.23, 0.36, 0.23, 0.08, 0.02]
+    },
+    high: {
+      ordinary: [0.09, 0.27, 0.34, 0.20, 0.08, 0.02],
+      collectible: [0.12, 0.22, 0.32, 0.25, 0.09],
+      fragment: [0.16, 0.32, 0.31, 0.15, 0.05, 0.01]
+    },
+    bonded: {
+      ordinary: [0.18, 0.34, 0.27, 0.13, 0.06, 0.02],
+      collectible: [0.08, 0.18, 0.30, 0.31, 0.13],
+      fragment: [0.25, 0.38, 0.25, 0.09, 0.03, 0]
+    },
+    legacy: {
+      ordinary: [0.25, 0.38, 0.22, 0.09, 0.04, 0.02],
+      collectible: [0.04, 0.10, 0.24, 0.38, 0.24],
+      fragment: [0.35, 0.40, 0.18, 0.05, 0.02, 0]
+    }
+  };
+
+  const QUANTITY_STATES = [
+    { id: "small", multiplier: 0.65, labels: ["1 箱", "零散 1 批"] },
+    { id: "standard", multiplier: 1.00, labels: ["2 箱", "标准 1 批"] },
+    { id: "full", multiplier: 1.35, labels: ["3 箱", "成套"] },
+    { id: "pallet", multiplier: 1.80, labels: ["整托", "大批量"] }
+  ];
+
+  const QUANTITY_WEIGHTS = {
+    low: [0.55, 0.36, 0.08, 0.01],
+    medium: [0.28, 0.45, 0.23, 0.04],
+    high: [0.12, 0.36, 0.39, 0.13],
+    bonded: [0.05, 0.20, 0.45, 0.30],
+    legacy: [0.02, 0.13, 0.40, 0.45]
+  };
+
+  const COLLECTIBLE_BASE_CAP = { low: 4500, medium: 9000, high: 15000, bonded: 20000, legacy: Infinity };
+  const VEHICLE_CHANCE = { low: 0, medium: 0, high: 0.003, bonded: 0.01, legacy: 0.025 };
+  const LOW_TIER_TRASH_EXCLUSIONS = new Set(["泡水木板", "发霉床垫", "裂缝水族箱"]);
 
   const SALE_MULTIPLIER = { ordinary: 1, collectible: 0.9, fragment: 0.84, trash: 1 };
 
   const ORDINARY_MARKET_CATEGORIES = ["商用库存", "影像器材", "工坊器材", "航海用品", "演出器材", "文体库存"];
   const PREMIUM_MARKET_CATEGORIES = ["奢侈配饰", "高级时装", "专业设备", "珠宝艺术", "车辆大奖", "复古收藏"];
-  const MARKET_CATEGORIES = [...ORDINARY_MARKET_CATEGORIES, ...PREMIUM_MARKET_CATEGORIES];
+  const MARKET_CATEGORIES = ORDINARY_MARKET_CATEGORIES.slice();
 
   const ITEMS = {
     ordinary: [
@@ -150,6 +199,100 @@
       { name: "船舱压载块", kind: "disposal", tags: ["port", "heavy", "dense", "mismatch"] }
     ]
   };
+
+  const BASE_VALUES = Object.freeze({
+    "酒店布草包": 600,
+    "成套客房台灯": 500,
+    "餐具周转箱": 450,
+    "折叠展示架": 400,
+    "摄影补光灯": 650,
+    "三脚架套装": 550,
+    "广播线材箱": 600,
+    "舞台音箱": 900,
+    "电钻工具箱": 700,
+    "小型电机": 800,
+    "铜线盘": 1000,
+    "轴承备件": 750,
+    "船用缆绳": 600,
+    "旧式航行灯": 800,
+    "舷窗配件": 700,
+    "救生用品箱": 600,
+    "球拍库存": 500,
+    "拼装模型库存": 550,
+    "瑞士陀飞轮腕表": 15000,
+    "满钻高级腕表": 12000,
+    "手工头层皮包": 4500,
+    "高级旅行箱": 3500,
+    "设计师礼服整批": 7000,
+    "限量球鞋批货": 5500,
+    "精品羊绒大衣": 4800,
+    "设计师眼镜陈列盘": 3500,
+    "数字电影摄影机": 12000,
+    "广播级变焦镜头": 8000,
+    "专业电影无人机套装": 9000,
+    "旗舰落地音箱对箱": 6500,
+    "钻石珠宝套装": 20000,
+    "足金现代摆件": 15000,
+    "当代限量版画": 6000,
+    "当代琉璃雕塑": 4500,
+    "老式旁轴相机": 4800,
+    "老船罗盘": 3200,
+    "沉船航海图·西北角": 700,
+    "沉船航海图·东北角": 700,
+    "沉船航海图·西南角": 700,
+    "沉船航海图·东南角": 700,
+    "黄铜星盘·刻度环": 900,
+    "黄铜星盘·星针": 800,
+    "黄铜星盘·悬臂": 800,
+    "黄铜星盘·底盘": 1000,
+    "消失的剧院·红玻璃": 750,
+    "消失的剧院·蓝玻璃": 750,
+    "消失的剧院·金徽片": 950,
+    "消失的剧院·铭牌": 850,
+    "八十只左脚溜冰鞋": 120,
+    "整箱过期挂历": -180,
+    "找不到主机的遥控器": 80,
+    "只有杯盖没有杯": 30,
+    "同款石膏头像": 150,
+    "巨型龙虾灯牌": 220,
+    "残缺霓虹字母": 260,
+    "七十二把无锁钥匙": 180,
+    "泡水木板": -450,
+    "发霉床垫": -700,
+    "淘汰转接线": 160,
+    "打不开的空保险箱": 200,
+    "裂缝水族箱": -380,
+    "只有腿的椅子": 60,
+    "石膏金砖": 80,
+    "空镜头盒": 50,
+    "只有正面的戏服": -120,
+    "船舱压载块": -300,
+    "高性能中置跑车": 45000,
+    "稀有高性能摩托": 18000
+  });
+
+  const STORAGE_SLOTS = Object.freeze({
+    "舞台音箱": 2,
+    "小型电机": 2,
+    "铜线盘": 2,
+    "船用缆绳": 2,
+    "舷窗配件": 2,
+    "八十只左脚溜冰鞋": 2,
+    "同款石膏头像": 2,
+    "巨型龙虾灯牌": 3,
+    "残缺霓虹字母": 2,
+    "泡水木板": 3,
+    "发霉床垫": 4,
+    "打不开的空保险箱": 3,
+    "裂缝水族箱": 3,
+    "只有腿的椅子": 2,
+    "船舱压载块": 3
+  });
+
+  const VEHICLE_HANDLING_FEES = Object.freeze({
+    "高性能中置跑车": 3000,
+    "稀有高性能摩托": 1200
+  });
 
   const JACKPOT_ITEMS = [
     { name: "高性能中置跑车", category: "车辆大奖", visualId: "premium-7", riskProfile: "vehicle", storageSlots: 10, quantity: "1 辆", isVehicle: true, tags: ["vehicle", "luxury", "heavy", "dense"] },
@@ -308,6 +451,13 @@
     return rows[rows.length - 1];
   }
 
+  function pickWeightedIndex(random, weights) {
+    return pickWeighted(
+      random,
+      weights.map((weight, index) => ({ index, weight }))
+    ).index;
+  }
+
   function shuffled(random, rows) {
     const copy = rows.slice();
     for (let index = copy.length - 1; index > 0; index -= 1) {
@@ -370,6 +520,61 @@
     if (type === "fragment") return "1 片";
     if (type === "trash") return pick(random, ["1 堆", "1 批", "塞满一角"]);
     return "1 件";
+  }
+
+  function rollQuantity(random, tierId, type, source) {
+    if (type !== "ordinary") {
+      return {
+        id: "fixed",
+        label: quantityLabel(random, type, source),
+        multiplier: 1
+      };
+    }
+    const state = QUANTITY_STATES[pickWeightedIndex(random, QUANTITY_WEIGHTS[tierId])];
+    return {
+      id: state.id,
+      label: pick(random, state.labels),
+      multiplier: state.multiplier
+    };
+  }
+
+  function rollItemCondition(random, tierId, type, source) {
+    if (type === "trash") {
+      return {
+        band: "fixed",
+        condition: source.kind === "disposal" ? "待清理" : source.kind === "scrap" ? "残旧" : "一般",
+        assessment: null,
+        multiplier: 1
+      };
+    }
+
+    if (type === "collectible") {
+      const bands = ["invalid", "suspect", "fair", "good", "complete"];
+      const band = bands[pickWeightedIndex(random, CONDITION_WEIGHTS[tierId].collectible)];
+      const outcomeByBand = {
+        invalid: "severeLoss",
+        suspect: "loss",
+        fair: "nearEven",
+        good: "profit",
+        complete: "jackpot"
+      };
+      const assessed = collectibleAssessment(random, source, outcomeByBand[band]);
+      return {
+        band,
+        condition: assessed.condition,
+        assessment: assessed.assessment,
+        multiplier: CONDITION_MULTIPLIERS.collectible[band]
+      };
+    }
+
+    const conditions = ["完整", "良好", "一般", "残旧", "重损", "报废"];
+    const condition = conditions[pickWeightedIndex(random, CONDITION_WEIGHTS[tierId][type])];
+    return {
+      band: condition,
+      condition,
+      assessment: null,
+      multiplier: CONDITION_MULTIPLIERS[type][condition]
+    };
   }
 
   function collectibleAssessment(random, source, outcomeId) {
@@ -444,9 +649,22 @@
     return "premium";
   }
 
-  function sourceForType(random, type, vehicleItem) {
+  function sourceForType(random, type, vehicleItem, tierId) {
     if (type === "collectible" && vehicleItem) return vehicleItem;
-    return pick(random, ITEMS[type]);
+    let pool = ITEMS[type];
+    if (type === "collectible") {
+      pool = ITEMS.collectible.filter((item) => BASE_VALUES[item.name] <= COLLECTIBLE_BASE_CAP[tierId]);
+    }
+    if (type === "trash" && tierId === "low") {
+      pool = ITEMS.trash.filter((item) => !LOW_TIER_TRASH_EXCLUSIONS.has(item.name));
+    }
+    return pick(random, pool);
+  }
+
+  function classifyOutcome(quickValue, expectedClose) {
+    const ratio = expectedClose > 0 ? quickValue / expectedClose : 0;
+    return OUTCOME_THRESHOLDS.find((outcome) => ratio <= outcome.maxRatio)
+      || OUTCOME_THRESHOLDS[OUTCOME_THRESHOLDS.length - 1];
   }
 
   function chooseManifest(random, items) {
@@ -531,21 +749,24 @@
     const expectedClose = roundMoney(
       Math.max(between(random, tier.close[0], tier.close[1]), startingBid * 1.1)
     );
-    let outcome = pickWeighted(random, OUTCOME_BANDS);
     const layers = [];
-    const vehicleEligible = ["high", "bonded", "legacy"].includes(tierId);
-    const vehicleItem = vehicleEligible && random() < 0.025 ? pick(random, JACKPOT_ITEMS) : null;
+    const vehicleItem = random() < VEHICLE_CHANCE[tierId] ? pick(random, JACKPOT_ITEMS) : null;
     const vehicleLayer = vehicleItem ? Math.floor(random() * 3) : -1;
 
     for (let layerIndex = 0; layerIndex < 3; layerIndex += 1) {
-      const type = layerIndex === vehicleLayer ? "collectible" : pickWeighted(random, TYPE_WEIGHTS).id;
-      const source = sourceForType(random, type, layerIndex === vehicleLayer ? vehicleItem : null);
-      const ratio = pickWeighted(random, VALUE_BUCKETS[type]).ratio;
-      const neutralValue = expectedClose * ratio;
-      const marketMultiplier = type === "ordinary" || type === "collectible"
-        ? market.multipliers[source.category] || 1
-        : 1;
-      layers.push({
+      const type = layerIndex === vehicleLayer ? "collectible" : pickWeighted(random, TYPE_WEIGHTS[tierId]).id;
+      const source = sourceForType(random, type, layerIndex === vehicleLayer ? vehicleItem : null, tierId);
+      const quantity = rollQuantity(random, tierId, type, source);
+      const quality = rollItemCondition(random, tierId, type, source);
+      const baseValue = BASE_VALUES[source.name];
+      if (!Number.isFinite(baseValue)) throw new Error(`商品缺少基础价格：${source.name}`);
+      const neutralValue = type === "trash"
+        ? baseValue
+        : baseValue * quantity.multiplier * quality.multiplier;
+      const marketMultiplier = type === "ordinary" ? market.multipliers[source.category] || 1 : 1;
+      const handlingFee = source.isVehicle ? VEHICLE_HANDLING_FEES[source.name] || 0 : 0;
+      const quickValue = neutralValue * SALE_MULTIPLIER[type] * marketMultiplier - handlingFee;
+      const item = {
         layer: layerIndex + 1,
         type,
         name: source.name,
@@ -554,51 +775,29 @@
         kind: source.kind || null,
         visualId: source.visualId || null,
         riskProfile: source.riskProfile || null,
-        storageSlots: source.storageSlots || 1,
+        storageSlots: source.storageSlots || STORAGE_SLOTS[source.name] || 1,
         isVehicle: Boolean(source.isVehicle),
         tags: source.tags.slice(),
-        quantity: quantityLabel(random, type, source),
-        neutralValue,
-        quickValue: neutralValue * SALE_MULTIPLIER[type] * marketMultiplier
-      });
-    }
-
-    const positive = layers.filter((item) => item.neutralValue > 0);
-    if (positive.length === 0) {
-      outcome = OUTCOME_BANDS[0];
-    } else {
-      const negativeValue = layers
-        .filter((item) => item.neutralValue <= 0)
-        .reduce((sum, item) => sum + item.neutralValue, 0);
-      const rawPositive = positive.reduce((sum, item) => sum + item.neutralValue, 0);
-      const targetValue = expectedClose * between(random, outcome.range[0], outcome.range[1]);
-      const positiveScale = Math.max(0, targetValue - negativeValue) / rawPositive;
-      for (const item of positive) {
-        item.neutralValue *= positiveScale;
-        const multiplier = item.type === "ordinary" || item.type === "collectible"
-          ? market.multipliers[item.category] || 1
-          : 1;
-        item.quickValue = item.neutralValue * SALE_MULTIPLIER[item.type] * multiplier;
-      }
-    }
-
-    for (const item of layers) {
-      if (item.type === "collectible") {
-        const assessed = collectibleAssessment(random, item, outcome.id);
-        item.condition = assessed.condition;
-        item.assessment = assessed.assessment;
-      } else {
-        item.condition = rollCondition(random, outcome.id);
-        item.assessment = null;
-      }
-      item.handlingFee = item.isVehicle ? roundMoney(expectedClose * (outcome.id === "severeLoss" ? 0.18 : 0.08)) : 0;
-      item.quickValue -= item.handlingFee;
+        quantity: quantity.label,
+        quantityBand: quantity.id,
+        quantityFactor: quantity.multiplier,
+        condition: quality.condition,
+        conditionBand: quality.band,
+        conditionFactor: quality.multiplier,
+        assessment: quality.assessment,
+        baseValue,
+        neutralValue: roundMoney(neutralValue),
+        quickValue: roundMoney(quickValue),
+        handlingFee: roundMoney(handlingFee)
+      };
       item.rarity = itemRarity(item, expectedClose);
-      item.neutralValue = roundMoney(item.neutralValue);
-      item.quickValue = roundMoney(item.quickValue);
       item.cleanupFee = item.quickValue < 0 ? Math.abs(item.quickValue) : 0;
+      layers.push(item);
     }
 
+    const totalNeutralValue = layers.reduce((sum, item) => sum + item.neutralValue, 0);
+    const totalQuickValue = layers.reduce((sum, item) => sum + item.quickValue, 0);
+    const outcome = classifyOutcome(totalQuickValue, expectedClose);
     const manifest = chooseManifest(random, layers);
     const latent = latentState(random, outcome.id, layers);
     const exteriorTarget = clamp(Math.round(-latent.risk + normal(random, 0, 0.8)), -3, 1);
@@ -621,8 +820,8 @@
       trueState: {
         outcome: outcome.id,
         outcomeLabel: outcome.label,
-        neutralValue: layers.reduce((sum, item) => sum + item.neutralValue, 0),
-        quickValue: layers.reduce((sum, item) => sum + item.quickValue, 0),
+        neutralValue: totalNeutralValue,
+        quickValue: totalQuickValue,
         layers
       },
       auctionReference: expectedClose

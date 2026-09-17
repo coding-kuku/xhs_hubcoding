@@ -27,9 +27,9 @@ Node 仅用于仓库内的离线测试和概率模拟，不进入小红书上传
 
 ## 当前技术债务
 
-经济数值同时存在于 `src/data/economy-config.json` 和 `src/core/daily-generator.js` 的常量中。下一步整合应创建普通本地 JS 数据文件，例如 `src/data/economy-data.js`，由 `<script src>` 提前加载并成为唯一运行时数据源。
+当前运行时经济以 `src/core/daily-generator.js` 和 `src/core/game-engine.js` 为准；`src/data/economy-config.json` 与旧模拟器只保留为历史研究记录，不能再作为改数值的入口。下一步整合应创建普通本地 JS 数据文件，例如 `src/data/economy-data.js`，由 `<script src>` 提前加载并成为唯一运行时数据源。
 
-不能在浏览器中用 `fetch` 读取 JSON，因为项目要求完全离线且明确禁止网络请求。JSON 目前只服务开发期模拟和可读配置。
+不能在浏览器中用 `fetch` 读取 JSON，因为项目要求完全离线且明确禁止网络请求。
 
 ## 发布包与仓库的区别
 

@@ -1,5 +1,6 @@
 {
-  "version": "1.1.0",
+  "version": "1.1.0-legacy",
+  "status": "历史研究记录；当前运行时经济以 src/core/daily-generator.js 和 ECONOMY_AND_PROBABILITY_BASELINE.md 为准",
   "startingCash": 6000,
   "startingWarehouseSlots": 50,
   "dailyBoard": {

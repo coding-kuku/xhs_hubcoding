@@ -68,7 +68,9 @@ for (let career = 0; career < 160; career += 1) {
         while (game.getView().phase === "reveal") game.revealNext();
         while (game.getView().phase === "disposition") {
           const pendingIndex = game.getView().pendingItems.findIndex((item) => !item.resolved);
-          const canStore = game.getView().warehouse.used < game.getView().warehouse.activeCapacity;
+          const pendingItem = game.getView().pendingItems[pendingIndex].item;
+          const canStore = game.getView().warehouse.used + (pendingItem.storageSlots || 1)
+            <= game.getView().warehouse.activeCapacity;
           const shouldStore = canStore && (career + day + pendingIndex) % 3 === 0;
           game.disposeItem(pendingIndex, shouldStore ? "store" : "sell");
           if (shouldStore) stored += 1;

@@ -384,8 +384,7 @@
         return roundMoney(lot.neutralValue * market);
       }
       if (lot.type === "collectible") {
-        const market = state.board.market.multipliers[lot.category] || 1;
-        return roundMoney(lot.neutralValue * SALE_MULTIPLIER.collectible * market);
+        return roundMoney(lot.neutralValue * SALE_MULTIPLIER.collectible);
       }
       if (lot.type === "fragment") return roundMoney(lot.neutralValue * SALE_MULTIPLIER.fragment);
       return roundMoney(lot.originalQuickValue);

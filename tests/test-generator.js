@@ -31,6 +31,9 @@ for (const check of bandChecks) {
 }
 
 const typeCounts = { ordinary: 0, collectible: 0, fragment: 0, trash: 0 };
+const tierTypeCounts = Object.fromEntries(
+  ["low", "medium", "high"].map((tier) => [tier, { ordinary: 0, collectible: 0, fragment: 0, trash: 0 }])
+);
 let regularLayers = 0;
 let fogDays = 0;
 let fogContainers = 0;
@@ -65,6 +68,7 @@ for (let day = 0; day < simulatedDays; day += 1) {
       assert.equal(Object.keys(container.inspectionResults).length, 3, "普通柜必须预生成三种检查结果");
       for (const item of container.trueState.layers) {
         typeCounts[item.type] += 1;
+        if (tierTypeCounts[container.tier]) tierTypeCounts[container.tier][item.type] += 1;
         regularLayers += 1;
       }
     } else {
@@ -84,10 +88,27 @@ for (let day = 0; day < simulatedDays; day += 1) {
 const ratios = Object.fromEntries(
   Object.entries(typeCounts).map(([type, count]) => [type, count / regularLayers])
 );
-assert.ok(Math.abs(ratios.ordinary - 0.35) < 0.012, "普通货物比例偏离 35%");
-assert.ok(Math.abs(ratios.collectible - 0.35) < 0.012, "实体藏品比例偏离 35%");
-assert.ok(Math.abs(ratios.fragment - 0.15) < 0.01, "碎片比例偏离 15%");
-assert.ok(Math.abs(ratios.trash - 0.15) < 0.01, "垃圾比例偏离 15%");
+const expectedTierRatios = {
+  low: { ordinary: 0.52, collectible: 0.15, fragment: 0.08, trash: 0.25 },
+  medium: { ordinary: 0.44, collectible: 0.27, fragment: 0.13, trash: 0.16 },
+  high: { ordinary: 0.34, collectible: 0.40, fragment: 0.16, trash: 0.10 }
+};
+const tierRatios = {};
+for (const [tier, counts] of Object.entries(tierTypeCounts)) {
+  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  tierRatios[tier] = Object.fromEntries(
+    Object.entries(counts).map(([type, count]) => [type, count / total])
+  );
+  for (const [type, expected] of Object.entries(expectedTierRatios[tier])) {
+    assert.ok(
+      Math.abs(tierRatios[tier][type] - expected) < 0.015,
+      `${tier} 的 ${type} 出货率偏离 ${(expected * 100).toFixed(0)}%`
+    );
+  }
+}
+assert.ok(tierRatios.low.trash > tierRatios.medium.trash, "低价柜垃圾率必须高于中价柜");
+assert.ok(tierRatios.medium.trash > tierRatios.high.trash, "中价柜垃圾率必须高于高价柜");
+assert.ok(tierRatios.high.collectible > tierRatios.medium.collectible, "高价柜藏品率必须高于中价柜");
 
 const fogDayRate = fogDays / simulatedDays;
 assert.ok(fogDayRate > 0.16 && fogDayRate < 0.21, "雾柜日出现率应接近 18.5%");
@@ -98,6 +119,7 @@ console.log(JSON.stringify({
   simulatedDays,
   regularLayers,
   typeRatios: ratios,
+  tierTypeRatios: tierRatios,
   fogDayRate,
   sampleBoardId: first.boardId,
   sampleTiers: first.containers.map((container) => container.tier),

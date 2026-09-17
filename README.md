@@ -13,7 +13,7 @@
 | 完整竖屏小游戏 | 可直接试玩 | `index.html`、`app.js`、`styles.css`、`assets/` |
 | 每日五柜生成 | 已实现并有测试 | `src/core/daily-generator.js` |
 | 拍卖、开柜、处置、仓库状态机 | 已实现并有测试 | `src/core/game-engine.js` |
-| 经济与概率模型 | 已模拟并形成基线 | `src/data/economy-config.json` |
+| 经济与概率模型 | 已实装并形成回归基线 | `src/core/daily-generator.js`、`docs/mechanics/ECONOMY_AND_PROBABILITY_BASELINE.md` |
 | 线索配置 | 已形成基线 | `src/data/clue-config.json` |
 | 拍卖场、仓库、交易摊、藏品册与直播反馈 | 已接线 | 根目录运行文件 |
 | NPC 长线关系、榜一与随机事件 | 规则方向已确认，待实现 | `docs/mechanics/NPC_AND_RANDOM_EVENTS.md` |
@@ -48,11 +48,11 @@
 - 初始展示低、中、高三档；总资产达到 12,000 和 30,000 后逐步出现保税柜与远洋遗存柜。
 - 符合条件的位置各有 5% 概率替换为雾柜，每天最多一个；首个低价安全柜不被替换。
 - 普通柜固定三层，但三层独立抽取，不设置“第三层保底”。
-- 每层类型概率为普通货物 35%、实体藏品 35%、宝藏碎片 15%、垃圾与异物 15%。
+- 每层类型概率按柜档区分：低价柜 52/15/8/25%，中价柜 44/27/13/16%，高价柜 34/40/16/10%（普通/藏品/碎片/垃圾）。
 - 常规柜也会明显亏损；雾柜波动更大，可能爆赚，也可能为空且倒贴清理费。
 - 玩家只能选择稳跟、跳价或放弃，不能用每次加一元反复探测 NPC 底价。
 - 拍前最多做一次深入检查；物理线索真实，NPC 判断可能受能力、情绪、偏好和立场影响。
-- 普通货物与实体藏品每日行情控制在 -30% 至 +20%。藏品和碎片可立即出售，也可入库等待更好的回收渠道。
+- 普通货物每日行情控制在 -30% 至 +20%；藏品不跟随大宗行情。藏品和碎片可立即出售，也可入库等待更好的回收渠道。
 - 初始仓库 50 格；扩仓按 10 格递增至 100 格并按自然月收租，避免无限囤货。
 - 垃圾存在不同清理费和税费，不是所有开出物都能卖钱。
 - 存档只使用 `localStorage`；丢失存档后必须能正常开始新局。
@@ -93,19 +93,22 @@
 
 ```bash
 node tests/test-generator.js
+node tests/economy-balance-test.js
+node tests/mainline-playability-test.js
 node tests/test-engine.js
 node tests/stress-test.js
 node tests/legacy-prototype-smoke-test.js
 node tests/repository-compliance.js
 ```
 
-重新运行经济模拟：
+重新运行经济与主线可玩性模拟：
 
 ```bash
-node tools/simulate-economy.mjs 5000 60 20260915
+node tests/economy-balance-test.js
+node tests/mainline-playability-test.js
 ```
 
-生成的 `reports/economy-simulation-latest.json` 默认不提交。确认一次新的平衡基线后，再以版本化文件名保存并同步更新机制文档。
+`tools/simulate-economy.mjs` 与 `src/data/economy-config.json` 保留为旧版研究记录，不再代表当前运行时经济。
 
 ## 如何维护
 
@@ -113,10 +116,10 @@ node tools/simulate-economy.mjs 5000 60 20260915
 
 | 想修改什么 | 首先修改 | 必须复核 |
 |---|---|---|
-| 赚亏率、爆仓率、物品类型概率 | `src/data/economy-config.json` | 经济模拟、`ECONOMY_AND_PROBABILITY_BASELINE.md` |
-| 物品名称、藏品、碎片、垃圾 | `src/data/economy-config.json`、`src/core/daily-generator.js` | `CARGO_AND_LOOT.md`、生成器测试 |
-| 市场波动、商户溢价、仓租 | 经济配置与 `src/core/game-engine.js` | 经济模拟、状态机测试 |
-| 雾柜概率和结果 | 经济配置与每日生成器 | 生成器测试、经济模拟 |
+| 赚亏率、物品类型概率、品相概率 | `src/core/daily-generator.js` | 两个经济/主线测试、`ECONOMY_AND_PROBABILITY_BASELINE.md` |
+| 物品名称、价格、藏品、碎片、垃圾 | `src/core/daily-generator.js` | 商品价格清单、生成器测试 |
+| 市场波动、商户溢价、仓租 | 每日生成器与 `src/core/game-engine.js` | 经济测试、状态机测试 |
+| 雾柜概率和结果 | 每日生成器 | 生成器测试、经济测试 |
 | 申报、外观、检查文本 | `src/data/clue-config.json`、每日生成器 | `CLUE_AND_INSPECTION.md` |
 | 拍卖轮次、加价单位、封槌规则 | `src/core/game-engine.js` | `AUCTION_RULES.md`、状态机测试 |
 | 每日五柜与资产解锁 | `src/core/daily-generator.js` | `DAILY_GENERATION.md`、生成器测试 |
@@ -126,7 +129,7 @@ node tools/simulate-economy.mjs 5000 60 20260915
 | 开柜动作和反馈节奏 | `app.js`、`styles.css` | 触摸操作与低端机体验 |
 | 小红书上传规则 | 根目录运行文件 | `RELEASE_CHECKLIST.md`、合规测试 |
 
-目前经济配置在 JSON 和生成器常量中仍有一部分重复。这是已记录的整合债务；在完整 UI 接线前应将运行时数据收敛到本地 `.js` 数据文件，不能用 `fetch` 读取 JSON。详情见架构与实施状态文档。
+当前唯一生效的经济逻辑在生成器和状态机中；旧 JSON 只作历史研究记录。后续仍应将运行时常量收敛到本地 `.js` 数据文件，不能用 `fetch` 读取 JSON。详情见架构与实施状态文档。
 
 ## 分支和版本建议
 

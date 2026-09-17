@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const config = JSON.parse(fs.readFileSync(path.join(here, "../src/data/economy-config.json"), "utf8"));
 
+console.warn("[legacy] 该脚本不代表当前运行时经济；请改跑 tests/economy-balance-test.js 与 tests/mainline-playability-test.js。");
+
 const RUNS = Number(process.argv[2] || 30000);
 const DAYS = Number(process.argv[3] || 60);
 const SEED = Number(process.argv[4] || 20260915);
