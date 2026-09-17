@@ -852,23 +852,59 @@
     activeTab = "market";
     updateNav();
     const featuredCategories = view.market.featuredCategories || Object.keys(view.market.multipliers).slice(0, 6);
-    const cards = featuredCategories.map((category) => [category, view.market.multipliers[category] || 1]).map(([category, multiplier]) => `
-      <div class="market-card ${multiplier < 1 ? "is-down" : ""}"><span>${escapeHtml(category)}</span><strong>${percent(multiplier)}</strong></div>`).join("");
+    const shortCategoryLabels = {
+      "商用库存": "商用",
+      "影像器材": "影像",
+      "工坊器材": "工坊",
+      "航海用品": "航海",
+      "演出器材": "演出",
+      "文体库存": "文体"
+    };
+    const marketRows = featuredCategories.map((category) => {
+      const multiplier = view.market.multipliers[category] || 1;
+      const change = Math.round((multiplier - 1) * 100);
+      return { category, multiplier, change };
+    });
+    const sortedMarketRows = marketRows.slice().sort((left, right) => right.multiplier - left.multiplier);
+    const leadingMarket = sortedMarketRows[0];
+    const trailingMarket = sortedMarketRows[sortedMarketRows.length - 1];
+    const marketCounts = marketRows.reduce((counts, row) => {
+      if (row.change > 0) counts.up += 1;
+      else if (row.change < 0) counts.down += 1;
+      else counts.flat += 1;
+      return counts;
+    }, { up: 0, down: 0, flat: 0 });
+    const remainingMarkets = marketRows
+      .filter((row) => row.category !== leadingMarket.category && row.category !== trailingMarket.category)
+      .sort((left, right) => Math.abs(right.change) - Math.abs(left.change));
+    const marketSummary = `
+      <section class="market-summary" aria-label="今日行情">
+        <div class="market-summary-head">
+          <strong>今日行情</strong>
+          <span><b class="is-up">${marketCounts.up}涨</b><i>·</i><b class="is-down">${marketCounts.down}跌</b><i>·</i><b>${marketCounts.flat}平</b></span>
+        </div>
+        <div class="market-extremes">
+          <div class="market-extreme is-up"><span><small>领涨</small><b>${escapeHtml(leadingMarket.category)}</b></span><strong>${percent(leadingMarket.multiplier)}</strong></div>
+          <div class="market-extreme is-down"><span><small>领跌</small><b>${escapeHtml(trailingMarket.category)}</b></span><strong>${percent(trailingMarket.multiplier)}</strong></div>
+        </div>
+        <div class="market-ticker" aria-label="其他行情">${remainingMarkets.map((row) => `
+          <span>${escapeHtml(shortCategoryLabels[row.category] || row.category)} <strong class="${row.change > 0 ? "is-up" : row.change < 0 ? "is-down" : ""}">${percent(row.multiplier)}</strong></span>`).join("")}</div>
+      </section>`;
     const merchant = view.merchant
       ? `<article class="merchant-card"><p class="section-kicker">定向收购</p><h3>${escapeHtml(view.merchant.title)}</h3><p>收购：${escapeHtml(view.merchant.targetCategory)} · 溢价 ${Math.round((view.merchant.premium - 1) * 100)}% · 今日还收 ${view.merchant.lotsRemaining} 批</p></article>`
       : `<article class="merchant-card"><p class="section-kicker">定向收购</p><h3>今天没有特殊买家</h3><p>仍可按每日行情出售仓库货物。定向商户并非每天出现。</p></article>`;
     const lots = view.warehouse.lots.map((lot) => `
-      <article class="warehouse-card">
+      <article class="market-lot-card ${lot.merchantEligible ? "has-merchant" : ""}">
         <div class="warehouse-thumb">${itemVisualMarkup(lot, "is-list-thumb")}</div>
-        <div class="warehouse-copy"><h3>${escapeHtml(lot.name)}</h3><p>${escapeHtml(lot.category)} · 今日摊位价 ${money(lot.stallValue)}${lot.merchantEligible ? " · 符合定向收购" : ""}</p></div>
-        <div class="lot-buttons">
-          <button class="small-button" type="button" data-action="sell-lot" data-lot="${escapeHtml(lot.lotId)}" data-channel="stall">卖给摊主</button>
-          ${lot.merchantEligible ? `<button class="small-button is-gold" type="button" data-action="sell-lot" data-lot="${escapeHtml(lot.lotId)}" data-channel="merchant">定向高卖</button>` : ""}
+        <div class="market-lot-copy"><h3>${escapeHtml(lot.name)}${lot.count > 1 ? ` ×${lot.count}` : ""}</h3><p>${escapeHtml(lot.category)}${lot.merchantEligible ? " · 符合定向收购" : ""}</p></div>
+        <div class="market-lot-actions">
+          <button class="small-button" type="button" data-action="sell-lot" data-lot="${escapeHtml(lot.lotId)}" data-channel="stall"><span>卖给摊主</span><strong>${money(lot.stallValue)}</strong></button>
+          ${lot.merchantEligible ? `<button class="small-button is-gold" type="button" data-action="sell-lot" data-lot="${escapeHtml(lot.lotId)}" data-channel="merchant"><span>定向高卖</span><strong>溢价</strong></button>` : ""}
         </div>
       </article>`).join("");
     document.querySelector("#marketView").innerHTML = `
-      <header class="section-heading"><div><p class="section-kicker">DAILY MARKET</p><h2>每日交易摊</h2></div><div class="section-meta">波动范围<br>-30% 至 +20%</div></header>
-      <div class="market-grid">${cards}</div>
+      <header class="section-heading"><div><p class="section-kicker">DAILY MARKET</p><h2>每日交易摊</h2></div></header>
+      ${marketSummary}
       ${merchant}
       <h3 class="inspection-title">可出售库存</h3>
       <div class="market-lot-list">${lots || `<div class="empty-state"><i>¥</i><strong>没有可卖的库存</strong><p>拍下货柜并把物品存入仓库，再来等行情。</p></div>`}</div>`;

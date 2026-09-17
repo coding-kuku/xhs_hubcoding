@@ -103,6 +103,19 @@ clickNav("warehouse");
 if (!byId.warehouseView.innerHTML.includes("港边仓库")) throw new Error("warehouse did not render");
 clickNav("market");
 if (!byId.marketView.innerHTML.includes("每日交易摊")) throw new Error("market did not render");
+if (!navButtons.find((button) => button.dataset.tab === "market").classList.contains("is-active")) {
+  throw new Error("market navigation did not become active");
+}
+if (byId.marketView.innerHTML.includes("波动范围")) throw new Error("market exposed the hidden fluctuation range");
+if (!byId.marketView.innerHTML.includes('class="market-summary"')) throw new Error("compact market summary did not render");
+if (!byId.marketView.innerHTML.includes("领涨") || !byId.marketView.innerHTML.includes("领跌")) {
+  throw new Error("market extremes did not render");
+}
+const marketCounts = byId.marketView.innerHTML.match(/is-up">(\d+)涨<\/b><i>·<\/i><b class="is-down">(\d+)跌<\/b><i>·<\/i><b>(\d+)平<\/b>/);
+if (!marketCounts || marketCounts.slice(1).map(Number).reduce((sum, count) => sum + count, 0) !== 6) {
+  throw new Error("market trend counts did not cover all six categories");
+}
+if (byId.marketView.innerHTML.includes("market-grid")) throw new Error("retired market card grid still rendered");
 clickNav("collection");
 if (!byId.collectionView.innerHTML.includes("港口藏品册")) throw new Error("collection did not render");
 clickNav("board");
@@ -145,4 +158,6 @@ if (!appSource.includes('data-action="open-directly" hidden')) throw new Error("
 if (!appSource.includes('action === "open-directly"')) throw new Error("opening fallback action is missing");
 if (!appSource.includes("window.setTimeout(show, 3000)")) throw new Error("opening fallback timeout is missing");
 if (!appSource.includes('item.isVehicle && item.rarity === "legendary"')) throw new Error("vehicle prize badge is not rarity-gated");
+if (!appSource.includes('class="market-lot-card')) throw new Error("compact market inventory row is missing");
+if (!appSource.includes('class="market-lot-actions"')) throw new Error("side-aligned market sell actions are missing");
 console.log("ui smoke ok");
