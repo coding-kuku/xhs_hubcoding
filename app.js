@@ -354,7 +354,7 @@
   }
 
   function itemValueLabel(item) {
-    if (item.quickValue < 0) return `清理 ${money(item.quickValue)}`;
+    if (item.quickValue < 0) return `清理 ${money(Math.abs(item.quickValue))}`;
     return money(item.quickValue);
   }
 
@@ -769,7 +769,7 @@
           <header class="item-head"><strong>${escapeHtml(item.name)}</strong><span>${itemValueLabel(item)}</span></header>
           <p class="item-meta">${escapeHtml(TYPE_LABELS[item.type] || item.type)} · ${escapeHtml(item.category)} · ${escapeHtml(item.condition)}${item.storageSlots > 1 ? ` · 占 ${item.storageSlots} 格` : ""}</p>
           ${item.assessment ? `<p class="assessment-line">鉴定：${escapeHtml(item.assessment)}</p>` : ""}
-          ${item.handlingFee ? `<p class="fee-line">净价已扣运输处置费 ${money(item.handlingFee)}</p>` : ""}
+          ${item.handlingFee ? `<p class="fee-line">出售净价会扣运输处置费 ${money(item.handlingFee)}</p>` : ""}
           ${pending.resolved ? `<div class="resolved-mark">${pending.action === "sell" ? "已现场处置" : "已收入仓库"}</div>` : `
             <div class="item-actions">
               <button class="small-button is-gold" type="button" data-action="dispose" data-index="${index}" data-dispose="sell">
@@ -1133,7 +1133,8 @@
   }
 
   function showLootShowcase(item) {
-    const title = item.isVehicle ? "镇场大奖现身"
+    const title = item.isVehicle && item.rarity === "legendary" ? "镇场大奖现身"
+      : item.isVehicle ? "大型货品现身"
       : item.type === "fragment" ? "宝藏碎片入镜"
         : item.rarity === "legendary" ? "传奇发现"
           : item.rarity === "epic" ? "稀有精品"
@@ -1148,7 +1149,7 @@
         <h2>${escapeHtml(item.name)}</h2>
         ${item.assessment ? `<p class="showcase-assessment">${escapeHtml(item.assessment)}</p>` : ""}
         <div class="showcase-value"><span>现场净处置价</span><strong>${itemValueLabel(item)}</strong></div>
-        ${item.storageSlots > 1 ? `<div class="showcase-warning">收入仓库需要 ${item.storageSlots} 个仓位${item.handlingFee ? ` · 净价已扣 ${money(item.handlingFee)} 运输处置费` : ""}</div>` : ""}
+        ${item.storageSlots > 1 ? `<div class="showcase-warning">收入仓库需要 ${item.storageSlots} 个仓位${item.handlingFee ? ` · 出售时仍扣 ${money(item.handlingFee)} 运输处置费` : ""}</div>` : ""}
         <button class="primary-button" type="button" data-modal-action="loot-close">收下结果，继续清点</button>
       </div>`;
     elements.modal.hidden = false;
@@ -1162,8 +1163,10 @@
         setLiveMessage(`榜一「海上明月」：这块“${item.name}”先别急着卖，像是一套里的。`, 12);
       } else if (item.type === "collectible") {
         setLiveMessage(`直播间：藏品出镜了，有人开始追问品相。`, 8);
-      } else if (item.type === "trash") {
+      } else if (item.type === "trash" && item.quickValue < 0) {
         setLiveMessage(`直播间：有人笑出了声——这件还要付清理费。`, 2);
+      } else if (item.type === "trash") {
+        setLiveMessage(`直播间：这批异物居然还有人愿意接手，至少能回一点钱。`, 3);
       } else {
         setLiveMessage(`直播间：${item.name}，先记下今天的行情再决定。`, 4);
       }

@@ -22,6 +22,12 @@ for (let day = 1; day <= 45; day += 1) {
         assert.ok(item.visualId, `${item.name} has no visual`);
         assert.ok(item.assessment, `${item.name} has no assessment`);
         assert.ok(item.storageSlots >= 1, `${item.name} has no storage cost`);
+        if (item.isVehicle && item.condition === "报废") {
+          assert.equal(item.rarity, "junk", "报废车辆不能标记为传奇大奖");
+        }
+        if (item.isVehicle && item.rarity === "legendary") {
+          assert.equal(item.condition, "完整", "只有完整车辆可以标记为传奇大奖");
+        }
       }
     }
   }
@@ -30,6 +36,22 @@ for (let day = 1; day <= 45; day += 1) {
 assert.ok(modernNames.has("瑞士陀飞轮腕表"), "modern luxury pool did not appear");
 assert.ok(modernNames.has("数字电影摄影机"), "premium equipment pool did not appear");
 assert.ok(!modernNames.has("机械打字机"), "retired antique pool still appears");
+
+const vehicleRaritiesByCondition = new Map();
+for (let sample = 0; sample < 1200; sample += 1) {
+  const board = generator.createDailyBoard({
+    dateKey: "2026-12-08",
+    saveSeed: `vehicle-rarity-${sample}`,
+    totalAssets: 42000
+  });
+  for (const container of board.containers) {
+    for (const item of container.trueState.layers) {
+      if (item.isVehicle) vehicleRaritiesByCondition.set(item.condition, item.rarity);
+    }
+  }
+}
+assert.equal(vehicleRaritiesByCondition.get("报废"), "junk", "报废车辆必须降为垃圾级");
+assert.equal(vehicleRaritiesByCondition.get("完整"), "legendary", "完整车辆才允许标记为传奇大奖");
 
 function pendingVehicleState() {
   const game = engine.createGame({ generator, dateKey: "2026-11-03", saveSeed: "vehicle-store", initialCash: 6000 });
@@ -68,8 +90,27 @@ assert.equal(storedView.warehouse.activeCapacity, 50);
 assert.equal(storedView.warehouse.used, 10);
 assert.equal(storedView.warehouse.lots[0].storageSlots, 10);
 const vehicleMarket = storedView.market.multipliers["车辆大奖"];
-const expectedStall = Math.round((12000 * 0.9 * vehicleMarket) / 10) * 10;
+const expectedStall = Math.round((12000 * 0.9 * vehicleMarket - 800) / 10) * 10;
 assert.equal(storedView.warehouse.lots[0].stallValue, expectedStall);
+assert.equal(storedView.warehouse.lots[0].handlingFee, 800, "车辆入库后必须保留运输处置费");
+assert.equal(storedView.player.totalAssets, 17200, "总资产必须扣除尚未支付的车辆运输处置费");
+
+const merchantVehicleState = pendingVehicleState();
+merchantVehicleState.board.merchant = {
+  id: "M-vehicle-test",
+  title: "车辆定向买家",
+  targetType: "collectible",
+  targetCategory: "车辆大奖",
+  premium: 1.2,
+  maxLots: 1
+};
+const merchantVehicleGame = engine.createGame({ generator, savedState: merchantVehicleState });
+merchantVehicleGame.disposeItem(0, "store");
+const merchantVehicleLot = merchantVehicleGame.getView().warehouse.lots[0];
+const merchantGross = Math.round((12000 * 0.9 * vehicleMarket) / 10) * 10;
+const expectedMerchantValue = Math.round((merchantGross * 1.2 - 800) / 10) * 10;
+merchantVehicleGame.sellWarehouseLot(merchantVehicleLot.lotId, "merchant");
+assert.equal(merchantVehicleGame.getView().player.cash, 6000 + expectedMerchantValue, "商户溢价后仍须完整扣除车辆运输处置费");
 
 const crowdedState = pendingVehicleState();
 crowdedState.warehouse.lots.push({

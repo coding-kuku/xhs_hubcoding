@@ -15,7 +15,7 @@ function revealEverything(game) {
 function winSelectedContainer(game, containerId) {
   game.selectContainer(containerId);
   const selected = game.getView().containers.find((container) => container.id === containerId);
-  if (!selected.isFog) game.inspect("door");
+  if (!selected.isFog && game.getView().phase === "inspection") game.inspect("door");
   game.startAuction();
   while (game.getView().phase === "auction") game.auctionAction("follow");
   assert.equal(game.getView().reveal.winnerType, "player");
@@ -44,6 +44,12 @@ assert.throws(() => game.startAuction(), /当前阶段|检查/);
 const clue = game.inspect("documents");
 assert.equal(clue.action, "documents");
 assert.equal(game.getView().phase, "decision");
+assert.throws(() => game.inspect("weigh"), /当前阶段|只能/);
+game.cancelSelection();
+game.selectContainer(regular.id);
+assert.equal(game.getView().phase, "decision", "返回后再次进入同一柜必须保留已完成的检查");
+assert.equal(game.getView().selection.inspectionChoice, "documents");
+assert.equal(game.getView().selection.inspectionResult.action, "documents");
 assert.throws(() => game.inspect("weigh"), /当前阶段|只能/);
 game.cancelSelection();
 
@@ -85,6 +91,28 @@ const beforeSale = view.player.cash;
 restored.sellWarehouseLot(firstLot.lotId, "stall");
 assert.equal(restored.getView().warehouse.used, usedBeforeSale - firstLot.storageSlots);
 assert.notEqual(restored.getView().player.cash, beforeSale);
+
+const legacyInspectionState = createGame({
+  dateKey: "2026-09-20",
+  saveSeed: "legacy-inspection-save",
+  initialCash: 6000,
+  npcStates: npcStatesWithCash(0)
+});
+const legacyInspectionContainer = legacyInspectionState.getView().containers.find((container) => !container.isFog);
+legacyInspectionState.selectContainer(legacyInspectionContainer.id);
+legacyInspectionState.inspect("documents");
+const saveWithoutInspectionMap = legacyInspectionState.exportSave();
+delete saveWithoutInspectionMap.containerInspections;
+const migratedInspectionGame = createGame({ savedState: saveWithoutInspectionMap });
+migratedInspectionGame.cancelSelection();
+migratedInspectionGame.selectContainer(legacyInspectionContainer.id);
+assert.equal(migratedInspectionGame.getView().phase, "decision", "旧存档迁移后仍须保留已完成检查");
+assert.equal(migratedInspectionGame.getView().selection.inspectionChoice, "documents");
+migratedInspectionGame.cancelSelection();
+migratedInspectionGame.advanceDay("2026-09-21");
+const nextDayRegular = migratedInspectionGame.getView().containers.find((container) => !container.isFog);
+migratedInspectionGame.selectContainer(nextDayRegular.id);
+assert.equal(migratedInspectionGame.getView().phase, "inspection", "进入新一天后必须清空昨日检查锁");
 
 const beforeNewMonth = restored.getView();
 restored.advanceDay("2026-10-01");
@@ -148,7 +176,8 @@ console.log(JSON.stringify({
   passed: true,
   tested: [
     "公开状态隔离",
-    "一次检查限制",
+    "一次检查限制与返回防绕过",
+    "旧存档检查迁移与跨日重置",
     "三轮拍卖",
     "玩家胜出与扣款",
     "旁观开柜",

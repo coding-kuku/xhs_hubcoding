@@ -70,6 +70,9 @@ for (let day = 0; day < simulatedDays; day += 1) {
     } else {
       assert.ok(container.trueState.layers.length <= 1, "雾柜最多一个结果位");
       assert.equal(container.inspectionResults, null, "雾柜不可进行常规深入检查");
+      for (const item of container.trueState.layers) {
+        if (item.type === "trash") assert.ok(item.quickValue <= 0, "雾柜垃圾不能产生正向即时售价");
+      }
     }
 
     for (const estimate of container.npcEstimates) {

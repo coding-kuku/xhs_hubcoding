@@ -68,6 +68,7 @@
       phase: "board",
       selectedContainerId: null,
       selectedInspection: null,
+      containerInspections: {},
       auction: null,
       reveal: null,
       pendingItems: [],
@@ -93,6 +94,12 @@
     if (!state || state.schemaVersion !== VERSION) fail("存档版本不兼容");
     if (!state.board || !Array.isArray(state.board.containers)) fail("存档缺少每日货柜数据");
     if (!state.warehouse || !Array.isArray(state.warehouse.lots)) fail("存档缺少仓库数据");
+    if (!state.containerInspections || Array.isArray(state.containerInspections) || typeof state.containerInspections !== "object") {
+      state.containerInspections = {};
+    }
+    if (state.selectedContainerId && state.selectedInspection && !state.containerInspections[state.selectedContainerId]) {
+      state.containerInspections[state.selectedContainerId] = state.selectedInspection;
+    }
     const contracted = clamp(Number(state.warehouse.contractedCapacity) || BASE_WAREHOUSE_CAPACITY, BASE_WAREHOUSE_CAPACITY, MAX_WAREHOUSE_CAPACITY);
     const active = clamp(Number(state.warehouse.activeCapacity) || BASE_WAREHOUSE_CAPACITY, BASE_WAREHOUSE_CAPACITY, contracted);
     state.warehouse.contractedCapacity = contracted;
@@ -340,6 +347,7 @@
         matching.storageSlots = Math.max(1, Number(matching.storageSlots) || 1) + slotsNeeded;
         matching.neutralValue = roundMoney(matching.neutralValue + item.neutralValue);
         matching.originalQuickValue = roundMoney(matching.originalQuickValue + item.quickValue);
+        matching.handlingFee = roundMoney((Number(matching.handlingFee) || 0) + (Number(item.handlingFee) || 0));
       } else {
         state.warehouse.lots.push({
           lotId: `L-${hashString(state.dateKey + "|" + state.selectedContainerId + "|" + item.layer + "|" + state.warehouse.lots.length).toString(16)}`,
@@ -357,6 +365,7 @@
           storageSlots: slotsNeeded,
           neutralValue: item.neutralValue,
           originalQuickValue: item.quickValue,
+          handlingFee: Number(item.handlingFee) || 0,
           storedDate: state.dateKey
         });
       }
@@ -365,7 +374,11 @@
       }
     }
 
-    function stallValue(lot) {
+    function handlingFee(lot) {
+      return Math.max(0, Number(lot.handlingFee) || 0);
+    }
+
+    function stallGrossValue(lot) {
       if (lot.type === "ordinary") {
         const market = state.board.market.multipliers[lot.category] || 1;
         return roundMoney(lot.neutralValue * market);
@@ -376,6 +389,10 @@
       }
       if (lot.type === "fragment") return roundMoney(lot.neutralValue * SALE_MULTIPLIER.fragment);
       return roundMoney(lot.originalQuickValue);
+    }
+
+    function stallValue(lot) {
+      return roundMoney(stallGrossValue(lot) - handlingFee(lot));
     }
 
     function merchantMatches(lot) {
@@ -396,10 +413,13 @@
     }
 
     function totalAssets() {
-      const stored = state.warehouse.lots.reduce((sum, lot) => sum + lot.neutralValue, 0);
+      const stored = state.warehouse.lots.reduce(
+        (sum, lot) => sum + lot.neutralValue - handlingFee(lot),
+        0
+      );
       const pending = state.pendingItems
         .filter((row) => !row.resolved)
-        .reduce((sum, row) => sum + row.item.neutralValue, 0);
+        .reduce((sum, row) => sum + row.item.neutralValue - handlingFee(row.item), 0);
       return roundMoney(state.cash + stored + pending);
     }
 
@@ -478,8 +498,8 @@
       if (resultFor(containerId)) fail("该货柜今日已经结算");
       const container = containerById(containerId);
       state.selectedContainerId = container.id;
-      state.selectedInspection = null;
-      state.phase = container.isFog ? "decision" : "inspection";
+      state.selectedInspection = state.containerInspections[container.id] || null;
+      state.phase = container.isFog || state.selectedInspection ? "decision" : "inspection";
       return getView();
     }
 
@@ -495,8 +515,9 @@
       assertPhase("inspection");
       const container = currentContainer();
       if (!container.inspectionResults || !container.inspectionResults[action]) fail("无效的检查方式");
-      if (state.selectedInspection) fail("每个货柜只能深入检查一次");
+      if (state.selectedInspection || state.containerInspections[container.id]) fail("每个货柜只能深入检查一次");
       state.selectedInspection = action;
+      state.containerInspections[container.id] = action;
       state.phase = "decision";
       return clone(container.inspectionResults[action]);
     }
@@ -664,7 +685,7 @@
         if (lot.type === "trash" && lot.kind === "oddity") {
           value = roundMoney(Math.max(50, Math.abs(lot.neutralValue) * 0.8) * state.board.merchant.premium);
         } else {
-          value = roundMoney(value * state.board.merchant.premium);
+          value = roundMoney(stallGrossValue(lot) * state.board.merchant.premium - handlingFee(lot));
         }
         state.merchantLotsSold += 1;
       }
@@ -732,6 +753,7 @@
       }
       state.selectedContainerId = null;
       state.selectedInspection = null;
+      state.containerInspections = {};
       state.auction = null;
       state.reveal = null;
       state.pendingItems = [];

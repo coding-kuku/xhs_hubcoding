@@ -240,7 +240,7 @@
 
   const FOG_OUTCOMES = [
     { id: "empty", weight: 0.14, quickRatio: -0.12, assetRatio: -0.12, type: "trash" },
-    { id: "nearEmpty", weight: 0.22, quickRatio: 0.35, assetRatio: 0.42, types: ["ordinary", "trash"] },
+    { id: "nearEmpty", weight: 0.22, quickRatio: 0.35, assetRatio: 0.42, type: "ordinary" },
     { id: "loss", weight: 0.22, quickRatio: 0.70, assetRatio: 0.84, types: ["ordinary", "collectible", "fragment"] },
     { id: "nearEven", weight: 0.18, quickRatio: 1.00, assetRatio: 1.08, types: ["ordinary", "collectible", "fragment"] },
     { id: "profit", weight: 0.15, quickRatio: 1.60, assetRatio: 1.85, types: ["collectible", "fragment", "ordinary"] },
@@ -428,7 +428,13 @@
   }
 
   function itemRarity(item, expectedClose) {
-    if (item.isVehicle) return "legendary";
+    if (item.isVehicle) {
+      if (item.quickValue <= 0 || item.condition === "报废") return "junk";
+      if (item.condition === "重损") return "premium";
+      if (item.condition === "一般") return "rare";
+      if (item.condition === "良好") return "epic";
+      return "legendary";
+    }
     if (item.type === "fragment") return "fragment";
     if (item.type !== "collectible") return item.type === "trash" ? "junk" : "standard";
     const ratio = expectedClose > 0 ? item.neutralValue / expectedClose : 0;
@@ -654,9 +660,12 @@
     const fogAssessment = type === "collectible"
       ? collectibleAssessment(random, source, outcome.id === "nearEmpty" ? "loss" : outcome.id)
       : null;
-    const layers = outcome.id === "empty"
-      ? []
-      : [{
+    const fogCondition = fogAssessment
+      ? fogAssessment.condition
+      : rollCondition(random, outcome.id === "nearEmpty" ? "loss" : "nearEven");
+    const fogItem = outcome.id === "empty"
+      ? null
+      : {
           layer: 1,
           type,
           name: source.name,
@@ -669,14 +678,15 @@
           isVehicle: Boolean(source.isVehicle),
           tags: source.tags.slice(),
           quantity: quantityLabel(random, type, source),
-          condition: fogAssessment ? fogAssessment.condition : rollCondition(random, outcome.id === "nearEmpty" ? "loss" : "nearEven"),
+          condition: fogCondition,
           assessment: fogAssessment ? fogAssessment.assessment : null,
-          rarity: source.isVehicle ? "legendary" : outcome.id === "jackpot" ? "legendary" : outcome.id === "bigProfit" ? "epic" : type === "collectible" ? "rare" : type,
           neutralValue,
           quickValue,
           handlingFee,
           cleanupFee: quickValue < 0 ? Math.abs(quickValue) : 0
-        }];
+        };
+    if (fogItem) fogItem.rarity = itemRarity(fogItem, expectedClose);
+    const layers = fogItem ? [fogItem] : [];
     const cluePool = [
       { id: "no_manifest", text: "单据缺失，只剩一枚旧封签", evidence: 0, means: "品类完全未知" },
       { id: "covered_door", text: "黑色篷布盖住了原始箱门", evidence: 0, means: "无法进行常规验箱" },
