@@ -191,6 +191,20 @@ if (byId.detailView.innerHTML.includes("data-action=\"start-auction\"")) {
 }
 
 if (!memory.has("port-auction-game-save-v2")) throw new Error("save was not written");
+
+clickModal("confirm-reset");
+if (!byId.modalRoot.innerHTML.includes("所有进度都会消失")) throw new Error("reset confirmation did not render");
+clickModal("reset");
+const resetSave = JSON.parse(memory.get("port-auction-game-save-v2"));
+const resetMeta = JSON.parse(memory.get("port-auction-game-meta-v2"));
+if (resetSave.cash !== 6000) throw new Error("reset did not restore initial cash");
+if (resetSave.warehouse.lots.length !== 0) throw new Error("reset did not clear warehouse lots");
+if (resetSave.collections.discovered.length !== 0) throw new Error("reset did not clear collection progress");
+if (Object.keys(resetSave.containerResults).length !== 0) throw new Error("reset did not clear auction results");
+if (resetMeta.heat !== 0 || resetMeta.inspectionHintSeen) throw new Error("reset did not clear meta progress");
+if (!byId.boardView.innerHTML.includes("今日货柜")) throw new Error("fresh board did not render immediately after reset");
+if (!byId.modalRoot.innerHTML.includes("30 秒上手")) throw new Error("fresh tutorial did not render immediately after reset");
+
 const appSource = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
 if (!appSource.includes('data-action="open-directly" hidden')) throw new Error("opening fallback control is missing");
 if (!appSource.includes('action === "open-directly"')) throw new Error("opening fallback action is missing");
@@ -198,4 +212,6 @@ if (!appSource.includes("window.setTimeout(show, 3000)")) throw new Error("openi
 if (!appSource.includes('item.isVehicle && item.rarity === "legendary"')) throw new Error("vehicle prize badge is not rarity-gated");
 if (!appSource.includes('class="market-lot-card')) throw new Error("compact market inventory row is missing");
 if (!appSource.includes('class="market-lot-actions"')) throw new Error("side-aligned market sell actions are missing");
+if (!appSource.includes("lotMarketTrendMarkup")) throw new Error("warehouse market trend indicator is missing");
+if (appSource.includes("window.location.reload()")) throw new Error("reset still depends on a reload that can rewrite stale save data");
 console.log("ui smoke ok");

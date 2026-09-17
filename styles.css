@@ -2840,6 +2840,30 @@ p {
   text-align: right;
 }
 
+.warehouse-card .lot-value strong {
+  display: block;
+}
+
+.lot-market-trend {
+  color: #91adac;
+  font-size: var(--type-micro);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.warehouse-card .lot-market-trend {
+  display: block;
+  margin-top: 2px;
+}
+
+.lot-market-trend.is-up {
+  color: var(--mint);
+}
+
+.lot-market-trend.is-down {
+  color: #ef806b;
+}
+
 .lot-buttons {
   display: flex;
   grid-column: 1 / -1;

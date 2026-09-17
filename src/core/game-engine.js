@@ -110,6 +110,36 @@
     );
   }
 
+  function backfillMissingMarketCategories(state, generator) {
+    const categories = Array.isArray(generator.MARKET_CATEGORIES) ? generator.MARKET_CATEGORIES : [];
+    const currentMarket = state.board.market;
+    const currentMultipliers = currentMarket && currentMarket.multipliers;
+    if (!categories.length || !currentMultipliers || typeof currentMultipliers !== "object") return;
+    if (categories.every((category) => Number.isFinite(Number(currentMultipliers[category])))) return;
+
+    const regenerated = generator.createDailyBoard({
+      dateKey: state.dateKey,
+      saveSeed: state.saveSeed,
+      totalAssets: state.board.totalAssetsAtRefresh
+    }).market;
+    const multipliers = { ...regenerated.multipliers, ...currentMultipliers };
+    const sorted = Object.entries(multipliers).sort((left, right) => right[1] - left[1]);
+    const headlineUp = sorted[0][0];
+    const headlineDown = sorted[sorted.length - 1][0];
+    state.board.market = {
+      ...currentMarket,
+      multipliers,
+      featuredCategories: [...new Set([
+        headlineUp,
+        headlineDown,
+        ...(regenerated.featuredCategories || []),
+        ...categories
+      ])].slice(0, 6),
+      headlineUp,
+      headlineDown
+    };
+  }
+
   function createGame(options) {
     const settings = options || {};
     const generator = settings.generator || defaultGenerator;
@@ -119,6 +149,7 @@
 
     const state = settings.savedState ? clone(settings.savedState) : createInitialState(generator, settings);
     validateLoadedState(state);
+    backfillMissingMarketCategories(state, generator);
 
     function containerById(containerId) {
       const container = state.board.containers.find((row) => row.id === containerId);
@@ -378,13 +409,18 @@
       return Math.max(0, Number(lot.handlingFee) || 0);
     }
 
+    function marketMultiplier(lot) {
+      if (lot.type !== "ordinary" && lot.type !== "collectible") return 1;
+      const multiplier = Number(state.board.market.multipliers[lot.category]);
+      return Number.isFinite(multiplier) ? multiplier : 1;
+    }
+
     function stallGrossValue(lot) {
       if (lot.type === "ordinary") {
-        const market = state.board.market.multipliers[lot.category] || 1;
-        return roundMoney(lot.neutralValue * market);
+        return roundMoney(lot.neutralValue * marketMultiplier(lot));
       }
       if (lot.type === "collectible") {
-        return roundMoney(lot.neutralValue * SALE_MULTIPLIER.collectible);
+        return roundMoney(lot.neutralValue * SALE_MULTIPLIER.collectible * marketMultiplier(lot));
       }
       if (lot.type === "fragment") return roundMoney(lot.neutralValue * SALE_MULTIPLIER.fragment);
       return roundMoney(lot.originalQuickValue);
@@ -481,6 +517,7 @@
           lots: state.warehouse.lots.map((lot) => ({
             ...lot,
             stallValue: stallValue(lot),
+            marketMultiplier: marketMultiplier(lot),
             merchantEligible: merchantMatches(lot)
           }))
         },

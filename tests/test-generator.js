@@ -12,6 +12,10 @@ const baseOptions = {
 const first = generator.createDailyBoard(baseOptions);
 const second = generator.createDailyBoard(baseOptions);
 assert.deepEqual(first, second, "同一天、同存档种子必须完全一致");
+assert.equal(Object.keys(first.market.multipliers).length, 12, "普通货物和高级货品的 12 个品类都必须进入每日行情");
+for (const category of ["奢侈配饰", "高级时装", "专业设备", "珠宝艺术", "车辆大奖", "复古收藏"]) {
+  assert.ok(Number.isFinite(first.market.multipliers[category]), `${category} 必须有每日行情倍率`);
+}
 assert.notDeepEqual(
   first,
   generator.createDailyBoard({ ...baseOptions, dateKey: "2026-09-16" }),
@@ -67,11 +71,17 @@ for (let day = 0; day < simulatedDays; day += 1) {
   for (const multiplier of Object.values(board.market.multipliers)) {
     assert.ok(multiplier >= 0.7 && multiplier <= 1.2, "市场波动必须位于 -30% 至 +20%");
   }
-  const marketValues = Object.values(board.market.multipliers);
-  const upCount = marketValues.filter((multiplier) => multiplier > 1.05).length;
-  const downCount = marketValues.filter((multiplier) => multiplier < 0.95).length;
-  assert.ok(upCount >= 1 && upCount <= 2, "每日必须有 1–2 类明确上涨");
-  assert.ok(downCount >= 1 && downCount <= 2, "每日必须有 1–2 类明确下跌");
+  const marketGroups = [
+    ["商用库存", "影像器材", "工坊器材", "航海用品", "演出器材", "文体库存"],
+    ["奢侈配饰", "高级时装", "专业设备", "珠宝艺术", "车辆大奖", "复古收藏"]
+  ];
+  for (const categories of marketGroups) {
+    const marketValues = categories.map((category) => board.market.multipliers[category]);
+    const upCount = marketValues.filter((multiplier) => multiplier > 1.05).length;
+    const downCount = marketValues.filter((multiplier) => multiplier < 0.95).length;
+    assert.ok(upCount >= 1 && upCount <= 2, "普通和高级市场各必须有 1–2 类明确上涨");
+    assert.ok(downCount >= 1 && downCount <= 2, "普通和高级市场各必须有 1–2 类明确下跌");
+  }
 
   for (const container of board.containers) {
     assert.ok(container.auctionReference > container.startingBid, "竞价参考线必须高于起拍价");

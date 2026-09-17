@@ -1,7 +1,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-require("../src/core/daily-generator.js");
+const generator = require("../src/core/daily-generator.js");
 const { createGame } = require("../src/core/game-engine.js");
 
 function npcStatesWithCash(cash) {
@@ -125,6 +125,98 @@ const sameDayBoard = view.containers;
 restored.advanceDay("2026-10-01");
 assert.deepEqual(restored.getView().containers, sameDayBoard, "同日不得重复刷新");
 
+const marketState = createGame({
+  generator,
+  dateKey: "2026-09-15",
+  saveSeed: "warehouse-market-regression",
+  initialCash: 6000
+}).exportSave();
+marketState.warehouse.lots.push(
+  {
+    lotId: "L-market-ordinary",
+    name: "行情普通货",
+    type: "ordinary",
+    category: "商用库存",
+    condition: "良好",
+    count: 1,
+    storageSlots: 1,
+    neutralValue: 1000,
+    originalQuickValue: 1000,
+    handlingFee: 0,
+    storedDate: marketState.dateKey
+  },
+  {
+    lotId: "L-market-collectible",
+    name: "行情高级货",
+    type: "collectible",
+    category: "奢侈配饰",
+    condition: "真品",
+    count: 1,
+    storageSlots: 1,
+    neutralValue: 10000,
+    originalQuickValue: 9000,
+    handlingFee: 0,
+    storedDate: marketState.dateKey
+  }
+);
+const marketGame = createGame({ generator, savedState: marketState });
+const marketBefore = marketGame.getView();
+const ordinaryBefore = marketBefore.warehouse.lots.find((lot) => lot.lotId === "L-market-ordinary");
+const collectibleBefore = marketBefore.warehouse.lots.find((lot) => lot.lotId === "L-market-collectible");
+assert.equal(ordinaryBefore.stallValue, Math.round((1000 * ordinaryBefore.marketMultiplier) / 10) * 10);
+assert.equal(collectibleBefore.stallValue, Math.round((10000 * 0.9 * collectibleBefore.marketMultiplier) / 10) * 10);
+
+let changedDate = null;
+for (let day = 16; day <= 30; day += 1) {
+  const candidateDate = `2026-09-${day}`;
+  const candidateMarket = generator.createDailyBoard({
+    dateKey: candidateDate,
+    saveSeed: marketState.saveSeed,
+    totalAssets: 17000
+  }).market.multipliers;
+  if (candidateMarket["商用库存"] !== ordinaryBefore.marketMultiplier
+    && candidateMarket["奢侈配饰"] !== collectibleBefore.marketMultiplier) {
+    changedDate = candidateDate;
+    break;
+  }
+}
+assert.ok(changedDate, "测试日期范围内必须能找到两个库存品类同时波动的一天");
+marketGame.advanceDay(changedDate);
+const marketAfter = marketGame.getView();
+const ordinaryAfter = marketAfter.warehouse.lots.find((lot) => lot.lotId === "L-market-ordinary");
+const collectibleAfter = marketAfter.warehouse.lots.find((lot) => lot.lotId === "L-market-collectible");
+assert.notEqual(ordinaryAfter.marketMultiplier, ordinaryBefore.marketMultiplier, "普通库存跨日后必须读取新行情");
+assert.notEqual(ordinaryAfter.stallValue, ordinaryBefore.stallValue, "普通库存报价必须随跨日行情变化");
+assert.notEqual(collectibleAfter.marketMultiplier, collectibleBefore.marketMultiplier, "高级货品跨日后必须读取新行情");
+assert.notEqual(collectibleAfter.stallValue, collectibleBefore.stallValue, "高级货品报价必须随跨日行情变化");
+const cashBeforeMarketSale = marketAfter.player.cash;
+marketGame.sellWarehouseLot(collectibleAfter.lotId, "stall");
+assert.equal(
+  marketGame.getView().player.cash,
+  cashBeforeMarketSale + collectibleAfter.stallValue,
+  "高级货品出售必须按刷新后的当日行情结算"
+);
+
+const legacyMarketState = createGame({
+  generator,
+  dateKey: "2026-09-15",
+  saveSeed: "legacy-market-backfill",
+  initialCash: 6000
+}).exportSave();
+const legacyOrdinaryMarket = { ...legacyMarketState.board.market.multipliers };
+for (const category of ["奢侈配饰", "高级时装", "专业设备", "珠宝艺术", "车辆大奖", "复古收藏"]) {
+  delete legacyMarketState.board.market.multipliers[category];
+}
+const migratedMarketGame = createGame({ generator, savedState: legacyMarketState });
+const migratedMarket = migratedMarketGame.getView().market.multipliers;
+assert.equal(Object.keys(migratedMarket).length, 12, "旧存档载入时必须补齐高级货品行情");
+for (const category of ["商用库存", "影像器材", "工坊器材", "航海用品", "演出器材", "文体库存"]) {
+  assert.equal(migratedMarket[category], legacyOrdinaryMarket[category], "旧存档原有普通货行情不得被重抽");
+}
+for (const category of ["奢侈配饰", "高级时装", "专业设备", "珠宝艺术", "车辆大奖", "复古收藏"]) {
+  assert.ok(Number.isFinite(migratedMarket[category]), `旧存档必须补齐 ${category} 行情`);
+}
+
 const losingGame = createGame({
   dateKey: "2026-09-16",
   saveSeed: "engine-loss-test",
@@ -186,6 +278,8 @@ console.log(JSON.stringify({
     "仓库租赁差额",
     "跨月仓租",
     "仓库出售",
+    "普通库存与高级货品跨日行情联动",
+    "旧存档高级货品行情补齐",
     "软破产委托",
     "隔日刷新",
     "存档恢复"

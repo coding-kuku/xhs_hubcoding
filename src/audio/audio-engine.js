@@ -201,20 +201,69 @@
       });
     }
 
+    function noteFrequency(note) {
+      return 440 * Math.pow(2, (note - 69) / 12);
+    }
+
+    function musicPluck(note, beatAt, beatLength, volume, beat) {
+      const frequency = noteFrequency(note);
+      const delay = beatAt * beat;
+      const duration = beatLength * beat;
+      tone(musicBus, frequency, duration, volume, {
+        delay,
+        type: "triangle",
+        filterFrequency: 2700,
+        attack: 0.012
+      });
+      tone(musicBus, frequency * 2, Math.min(0.24, duration * 0.46), volume * 0.2, {
+        delay: delay + 0.012,
+        type: "sine",
+        filterFrequency: 3900,
+        attack: 0.009
+      });
+    }
+
+    function musicKeys(note, beatAt, beatLength, volume, beat) {
+      const frequency = noteFrequency(note);
+      const delay = beatAt * beat;
+      const duration = beatLength * beat;
+      tone(musicBus, frequency, duration, volume, {
+        delay,
+        type: "sine",
+        filterFrequency: 2200,
+        attack: 0.035
+      });
+      tone(musicBus, frequency * 2, duration * 0.72, volume * 0.12, {
+        delay: delay + 0.018,
+        type: "triangle",
+        filterFrequency: 3100,
+        attack: 0.028
+      });
+    }
+
+    function musicBass(note, beatAt, beatLength, volume, beat) {
+      tone(musicBus, noteFrequency(note), beatLength * beat, volume, {
+        delay: beatAt * beat,
+        type: "sine",
+        filterFrequency: 920,
+        attack: 0.022
+      });
+    }
+
     function profile() {
       if (scene === "auction") {
-        if (auctionRound >= 3) return { level: 0.17, interval: 3.4, pattern: [0, 2, 4, 3], spacing: 0.38 };
-        if (auctionRound === 2) return { level: 0.16, interval: 4.2, pattern: [0, 2, 4], spacing: 0.44 };
-        return { level: 0.15, interval: 5.1, pattern: [0, 2], spacing: 0.52 };
+        if (auctionRound >= 3) return { level: 1 };
+        if (auctionRound === 2) return { level: 0.96 };
+        return { level: 0.92 };
       }
       const profiles = {
-        board: { level: 0.15, interval: 7.2, pattern: [0, 2, 4, 2], spacing: 0.52 },
-        detail: { level: 0.13, interval: 7.8, pattern: [0, 2, 3], spacing: 0.58 },
-        opening: { level: 0.12, interval: 8.4, pattern: [0, 3, 4], spacing: 0.62 },
-        disposition: { level: 0.12, interval: 8.1, pattern: [2, 0, 3], spacing: 0.58 },
-        warehouse: { level: 0.1, interval: 9.2, pattern: [0, 2, 4], spacing: 0.66 },
-        market: { level: 0.14, interval: 7.5, pattern: [0, 3, 2, 4], spacing: 0.5 },
-        collection: { level: 0.15, interval: 7, pattern: [0, 2, 4, 5], spacing: 0.54 }
+        board: { level: 1 },
+        detail: { level: 0.82 },
+        opening: { level: 0.74 },
+        disposition: { level: 0.82 },
+        warehouse: { level: 0.72 },
+        market: { level: 0.92 },
+        collection: { level: 0.9 }
       };
       return profiles[scene] || profiles.board;
     }
@@ -227,7 +276,7 @@
 
     function startAmbience() {
       if (!context || ambience || !settings.music) return;
-      // BGM 只播放有明确音高的短句；不再铺持续低频、空气噪声或模拟唱片底噪。
+      // “港口晨光”只使用木琴感拨弦、柔和电钢和轻贝斯，不使用口琴音色。
       ambience = { active: true };
       updateMusicLevel();
     }
@@ -238,26 +287,37 @@
     }
 
     function schedulePhrase() {
-      const current = profile();
-      const pentatonic = [261.63, 293.66, 329.63, 392, 440, 523.25];
-      const transpose = random() > 0.76 ? 1.12246 : 1;
-      current.pattern.forEach(function playPhraseNote(scaleIndex, index) {
-        const frequency = pentatonic[scaleIndex] * transpose;
-        const delay = index * current.spacing;
-        tone(musicBus, frequency, 1.15, 0.11, {
-          delay,
-          type: "sine",
-          filterFrequency: 2500,
-          attack: 0.055
-        });
-        tone(musicBus, frequency * 2, 0.42, 0.018, {
-          delay: delay + 0.018,
-          type: "triangle",
-          filterFrequency: 3200,
-          attack: 0.026
+      const beat = 60 / 112;
+      const chords = [
+        [0, [55, 59, 62]], [4, [50, 54, 57]], [8, [52, 55, 59]], [12, [48, 52, 55]],
+        [16, [55, 59, 62]], [20, [50, 54, 57]], [24, [48, 52, 55]], [28, [50, 54, 57]]
+      ];
+      const bass = [
+        [0, 43], [4, 50], [8, 52], [12, 48],
+        [16, 43], [20, 50], [24, 48], [28, 50]
+      ];
+      const melody = [
+        [0, 67, 0.78, 1], [1, 71, 0.72, 1], [2, 74, 1.55, 1.08],
+        [4, 69, 0.72, 1], [5, 71, 0.72, 1], [6, 69, 0.72, 1], [7, 66, 0.72, 1],
+        [8, 71, 0.75, 1], [9, 76, 0.75, 1], [10, 74, 0.75, 1], [11, 71, 1.35, 1],
+        [13, 67, 0.75, 1], [14, 64, 0.75, 1], [15, 67, 1.2, 1],
+        [16, 74, 0.75, 1], [17, 71, 0.75, 1], [18, 69, 0.75, 1], [19, 67, 1.2, 1],
+        [21, 69, 0.75, 1], [22, 74, 0.75, 1], [23, 78, 1.2, 1.08],
+        [25, 76, 0.75, 1], [26, 74, 0.75, 1], [27, 71, 0.75, 1],
+        [28, 69, 0.75, 1], [29, 66, 0.75, 1], [30, 67, 1.75, 1.12]
+      ];
+      chords.forEach(function playMusicChord(chord) {
+        chord[1].forEach(function playMusicChordNote(note) {
+          musicKeys(note, chord[0], 3.55, 0.055, beat);
         });
       });
-      nextPhraseAt = context.currentTime + current.interval + random() * 1.4;
+      bass.forEach(function playMusicBass(event) {
+        musicBass(event[1], event[0], 1.4, 0.115, beat);
+      });
+      melody.forEach(function playMusicMelody(event) {
+        musicPluck(event[1], event[0], event[2], 0.18 * event[3], beat);
+      });
+      nextPhraseAt = context.currentTime + beat * 32 + 0.22;
     }
 
     function schedulerTick() {
@@ -282,10 +342,11 @@
       if (!ensureContext()) return Promise.resolve(false);
       startScheduler();
       if (settings.music) startAmbience();
+      const firstUnlock = !unlocked;
       const resume = context.state === "suspended" ? context.resume() : Promise.resolve();
       return Promise.resolve(resume).then(function markUnlocked() {
         unlocked = true;
-        nextPhraseAt = context.currentTime + 0.35;
+        if (firstUnlock) nextPhraseAt = context.currentTime + 0.18;
         updateMusicLevel();
         return true;
       }).catch(function ignoreUnlockFailure() {
@@ -297,7 +358,6 @@
       scene = nextScene || "board";
       auctionRound = clamp(detail && detail.round ? detail.round : 1, 1, 3);
       if (context) {
-        nextPhraseAt = Math.min(nextPhraseAt || context.currentTime, context.currentTime + 0.45);
         updateMusicLevel();
       }
     }

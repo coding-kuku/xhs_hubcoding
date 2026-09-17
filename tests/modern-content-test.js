@@ -89,7 +89,8 @@ const storedView = storedGame.getView();
 assert.equal(storedView.warehouse.activeCapacity, 50);
 assert.equal(storedView.warehouse.used, 10);
 assert.equal(storedView.warehouse.lots[0].storageSlots, 10);
-const expectedStall = Math.round((12000 * 0.9 - 800) / 10) * 10;
+const vehicleMarket = storedView.market.multipliers["车辆大奖"];
+const expectedStall = Math.round((12000 * 0.9 * vehicleMarket - 800) / 10) * 10;
 assert.equal(storedView.warehouse.lots[0].stallValue, expectedStall);
 assert.equal(storedView.warehouse.lots[0].handlingFee, 800, "车辆入库后必须保留运输处置费");
 assert.equal(storedView.player.totalAssets, 17200, "总资产必须扣除尚未支付的车辆运输处置费");
@@ -106,7 +107,7 @@ merchantVehicleState.board.merchant = {
 const merchantVehicleGame = engine.createGame({ generator, savedState: merchantVehicleState });
 merchantVehicleGame.disposeItem(0, "store");
 const merchantVehicleLot = merchantVehicleGame.getView().warehouse.lots[0];
-const merchantGross = Math.round((12000 * 0.9) / 10) * 10;
+const merchantGross = Math.round((12000 * 0.9 * merchantVehicleGame.getView().market.multipliers["车辆大奖"]) / 10) * 10;
 const expectedMerchantValue = Math.round((merchantGross * 1.2 - 800) / 10) * 10;
 merchantVehicleGame.sellWarehouseLot(merchantVehicleLot.lotId, "merchant");
 assert.equal(merchantVehicleGame.getView().player.cash, 6000 + expectedMerchantValue, "商户溢价后仍须完整扣除车辆运输处置费");

@@ -145,6 +145,24 @@
     persist();
   }
 
+  function resetGameProgress() {
+    try {
+      localStorage.removeItem(SAVE_KEY);
+      localStorage.removeItem(META_KEY);
+    } catch (error) {
+      // localStorage 不可用时仍重建当前内存中的游戏。
+    }
+    meta = defaultMeta();
+    game = null;
+    view = null;
+    activeTab = "board";
+    previewContainerId = null;
+    createGame();
+    closeModal();
+    render();
+    showTutorial();
+  }
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replaceAll("&", "&amp;")
@@ -163,6 +181,15 @@
   function percent(multiplier) {
     const value = Math.round((multiplier - 1) * 100);
     return `${value > 0 ? "+" : ""}${value}%`;
+  }
+
+  function lotMarketTrendMarkup(lot, prefix) {
+    if (!lot || (lot.type !== "ordinary" && lot.type !== "collectible")) return "";
+    const multiplier = Number(lot.marketMultiplier);
+    if (!Number.isFinite(multiplier)) return "";
+    const change = Math.round((multiplier - 1) * 100);
+    const trendClass = change > 0 ? "is-up" : change < 0 ? "is-down" : "is-flat";
+    return `<span class="lot-market-trend ${trendClass}">${escapeHtml(prefix || "")}${percent(multiplier)}</span>`;
   }
 
   function displayDate(dateKey) {
@@ -832,7 +859,7 @@
       <article class="warehouse-card">
         <div class="warehouse-thumb">${itemVisualMarkup(lot, "is-list-thumb")}</div>
         <div class="warehouse-copy"><h3>${escapeHtml(lot.name)}${lot.count > 1 ? ` ×${lot.count}` : ""}</h3><p>${escapeHtml(TYPE_LABELS[lot.type] || lot.type)} · ${escapeHtml(lot.condition)} · 占 ${lot.storageSlots || lot.count || 1} 格</p>${lot.assessment ? `<small>${escapeHtml(lot.assessment)}</small>` : ""}</div>
-        <div class="lot-value">${money(lot.stallValue)}</div>
+        <div class="lot-value"><strong>${money(lot.stallValue)}</strong>${lotMarketTrendMarkup(lot, "今日 ")}</div>
         <div class="lot-buttons">
           <button class="small-button" type="button" data-action="sell-lot" data-lot="${escapeHtml(lot.lotId)}" data-channel="stall">按今日价出售</button>
           ${lot.merchantEligible ? `<button class="small-button is-gold" type="button" data-action="sell-lot" data-lot="${escapeHtml(lot.lotId)}" data-channel="merchant">卖给定向商户</button>` : ""}
@@ -864,7 +891,13 @@
       "工坊器材": "工坊",
       "航海用品": "航海",
       "演出器材": "演出",
-      "文体库存": "文体"
+      "文体库存": "文体",
+      "奢侈配饰": "奢配",
+      "高级时装": "时装",
+      "专业设备": "专业",
+      "珠宝艺术": "珠宝",
+      "车辆大奖": "车辆",
+      "复古收藏": "复古"
     };
     const marketRows = featuredCategories.map((category) => {
       const multiplier = view.market.multipliers[category] || 1;
@@ -902,7 +935,7 @@
     const lots = view.warehouse.lots.map((lot) => `
       <article class="market-lot-card ${lot.merchantEligible ? "has-merchant" : ""}">
         <div class="warehouse-thumb">${itemVisualMarkup(lot, "is-list-thumb")}</div>
-        <div class="market-lot-copy"><h3>${escapeHtml(lot.name)}${lot.count > 1 ? ` ×${lot.count}` : ""}</h3><p>${escapeHtml(lot.category)}${lot.merchantEligible ? " · 符合定向收购" : ""}</p></div>
+        <div class="market-lot-copy"><h3>${escapeHtml(lot.name)}${lot.count > 1 ? ` ×${lot.count}` : ""}</h3><p>${escapeHtml(lot.category)} ${lotMarketTrendMarkup(lot, "今日 ")}${lot.merchantEligible ? " · 符合定向收购" : ""}</p></div>
         <div class="market-lot-actions">
           <button class="small-button" type="button" data-action="sell-lot" data-lot="${escapeHtml(lot.lotId)}" data-channel="stall"><span>卖给摊主</span><strong>${money(lot.stallValue)}</strong></button>
           ${lot.merchantEligible ? `<button class="small-button is-gold" type="button" data-action="sell-lot" data-lot="${escapeHtml(lot.lotId)}" data-channel="merchant"><span>定向高卖</span><strong>溢价</strong></button>` : ""}
@@ -1377,7 +1410,7 @@
       <p>今日货柜、竞拍进度、仓库与收藏均保存在本机。每日货柜只在日期变化后刷新。</p>
       <div class="sound-settings" aria-label="声音设置">
         <button class="sound-toggle ${sound.music ? "is-on" : ""}" type="button" data-modal-action="toggle-music">
-          <span><b>舒缓背景音乐</b><small>轻柔木琴旋律 · 无持续底噪</small></span><strong>${sound.music ? "已开启" : "已关闭"}</strong>
+          <span><b>港口晨光</b><small>原创田园旋律 · 木琴、电钢与轻贝斯</small></span><strong>${sound.music ? "已开启" : "已关闭"}</strong>
         </button>
         <button class="sound-toggle ${sound.sfx ? "is-on" : ""}" type="button" data-modal-action="toggle-effects">
           <span><b>操作音效</b><small>落槌、开柜与物品揭晓</small></span><strong>${sound.sfx ? "已开启" : "已关闭"}</strong>
@@ -1565,13 +1598,7 @@
     } else if (action === "advance-day") {
       advanceToNextDay();
     } else if (action === "reset") {
-      try {
-        localStorage.removeItem(SAVE_KEY);
-        localStorage.removeItem(META_KEY);
-      } catch (error) {
-        // 即使 localStorage 被禁用，页面仍能重新建立新局。
-      }
-      window.location.reload();
+      resetGameProgress();
     }
   });
 

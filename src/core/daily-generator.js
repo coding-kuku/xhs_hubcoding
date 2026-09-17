@@ -121,7 +121,7 @@
 
   const ORDINARY_MARKET_CATEGORIES = ["商用库存", "影像器材", "工坊器材", "航海用品", "演出器材", "文体库存"];
   const PREMIUM_MARKET_CATEGORIES = ["奢侈配饰", "高级时装", "专业设备", "珠宝艺术", "车辆大奖", "复古收藏"];
-  const MARKET_CATEGORIES = ORDINARY_MARKET_CATEGORIES.slice();
+  const MARKET_CATEGORIES = [...ORDINARY_MARKET_CATEGORIES, ...PREMIUM_MARKET_CATEGORIES];
 
   const ITEMS = {
     ordinary: [
@@ -492,19 +492,27 @@
     return TIER_MIX.starter.slice();
   }
 
-  function rollMarket(random) {
+  function rollMarketGroup(random, categories) {
     const multipliers = {};
-    const ordered = shuffled(random, MARKET_CATEGORIES);
+    const ordered = shuffled(random, categories);
     const downCount = random() < 0.5 ? 1 : 2;
     const upCount = random() < 0.5 ? 1 : 2;
     const downCategories = new Set(ordered.slice(0, downCount));
     const upCategories = new Set(ordered.slice(downCount, downCount + upCount));
-    for (const category of MARKET_CATEGORIES) {
+    for (const category of categories) {
       let range = [0.95, 1.05];
       if (downCategories.has(category)) range = random() < 0.5 ? [0.70, 0.80] : [0.80, 0.945];
       if (upCategories.has(category)) range = random() < 0.2 ? [1.15, 1.20] : [1.055, 1.15];
       multipliers[category] = Number(between(random, range[0], range[1]).toFixed(3));
     }
+    return { multipliers, ordered };
+  }
+
+  function rollMarket(random, premiumRandom) {
+    const ordinary = rollMarketGroup(random, ORDINARY_MARKET_CATEGORIES);
+    const premium = rollMarketGroup(premiumRandom, PREMIUM_MARKET_CATEGORIES);
+    const multipliers = { ...ordinary.multipliers, ...premium.multipliers };
+    const ordered = [...ordinary.ordered, ...premium.ordered];
     const sorted = Object.entries(multipliers).sort((a, b) => b[1] - a[1]);
     const featuredCategories = [...new Set([
       sorted[0][0],
@@ -868,9 +876,7 @@
     const source = fogItemForOutcome(random, outcome, tierId);
     const type = source.type || "trash";
     const neutralValue = roundMoney(expectedClose * outcome.assetRatio);
-    const marketMultiplier = type === "ordinary" || type === "collectible"
-      ? market.multipliers[source.category] || 1
-      : 1;
+    const marketMultiplier = type === "ordinary" ? market.multipliers[source.category] || 1 : 1;
     const handlingFee = source.isVehicle ? roundMoney(expectedClose * (outcome.id === "loss" ? 0.16 : 0.08)) : 0;
     const quickValue = roundMoney(expectedClose * outcome.quickRatio * marketMultiplier - handlingFee);
     const fogAssessment = type === "collectible"
@@ -1019,7 +1025,8 @@
     const unlockBand = totalAssets >= 30000 ? "legacy" : totalAssets >= 12000 ? "bonded" : "starter";
     const seed = hashString(seedText);
     const random = createRandom(seed);
-    const market = rollMarket(random);
+    const premiumMarketRandom = createRandom(hashString(seedText + "|premium-market"));
+    const market = rollMarket(random, premiumMarketRandom);
     const mix = getTierMix(totalAssets);
     const fogCandidates = [];
     for (let index = 1; index < mix.length; index += 1) {
@@ -1088,6 +1095,7 @@
 
   return Object.freeze({
     VERSION,
+    MARKET_CATEGORIES: Object.freeze(MARKET_CATEGORIES.slice()),
     createDailyBoard,
     itemProfile,
     localDateKey,

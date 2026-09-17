@@ -42,9 +42,11 @@ class FakeAudioContext {
     this.currentTime = 0;
     this.sampleRate = 48000;
     this.destination = new FakeNode();
+    this.oscillatorCount = 0;
+    FakeAudioContext.latest = this;
   }
   createGain() { const node = new FakeNode(); node.gain = new FakeParam(1); return node; }
-  createOscillator() { return new FakeSource(); }
+  createOscillator() { this.oscillatorCount += 1; return new FakeSource(); }
   createBufferSource() { return new FakeSource(); }
   createBiquadFilter() {
     const node = new FakeNode();
@@ -93,6 +95,9 @@ class FakeAudioContext {
   const synthesized = PortAudio.create({ storage });
   assert.equal(synthesized.isSupported(), true);
   assert.equal(await synthesized.unlock(), true);
+  FakeAudioContext.latest.currentTime = 1;
+  await new Promise((resolve) => setTimeout(resolve, 220));
+  assert.ok(FakeAudioContext.latest.oscillatorCount >= 80, "harbor morning BGM should schedule its full arrangement");
   synthesized.setScene("auction", { round: 3 });
   const effects = [
     ["preview"],
