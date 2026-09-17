@@ -71,6 +71,7 @@
   function defaultMeta() {
     return {
       tutorialSeen: false,
+      inspectionHintSeen: false,
       heat: 0,
       liveMessage: "港口信号已接通，等你开第一柜。",
       fogRevealed: {},
@@ -221,7 +222,7 @@
   }
 
   function rarityLabel(item) {
-    if (item.isVehicle) return "镇场大奖";
+    if (item.isVehicle && item.rarity === "legendary") return "镇场大奖";
     const labels = { legendary: "传奇发现", epic: "稀有精品", rare: "高价值", premium: "高级货", fragment: "宝藏碎片" };
     return labels[item.rarity] || "";
   }
@@ -485,7 +486,7 @@
     const result = view.selection ? view.selection.inspectionResult : null;
     const canAuction = view.phase === "decision";
     const inspections = container.inspectionChoices.map((choice, index) => `
-      <button class="inspection-button ${index === 2 ? "is-recommended" : ""}" type="button"
+      <button class="inspection-button ${!meta.inspectionHintSeen && index === 2 ? "is-recommended" : ""}" type="button"
         data-action="inspect" data-inspection="${escapeHtml(choice.action)}">
         <strong>${escapeHtml(choice.label)}</strong><span>${escapeHtml(choice.help)}</span>
       </button>`).join("");
@@ -648,7 +649,8 @@
             <p id="openingGestureHint">断绳后抓住左上翘角，斜向揭开帷幕</p>
           </div>
           <div class="gesture-progress" id="openingProgress"><span>0%</span></div>
-        </div>` : `
+        </div>
+        <button class="gesture-fallback-button" type="button" data-action="open-directly" hidden>手势不便？直接打开</button>` : `
         <div class="ritual-hud">
           <div class="ritual-symbol" id="openingGestureSymbol">↓</div>
           <div class="ritual-copy">
@@ -657,7 +659,8 @@
             <p id="openingGestureHint">封签断开后，再横向滑开两扇柜门</p>
           </div>
           <div class="gesture-progress" id="openingProgress"><span>0%</span></div>
-        </div>`;
+        </div>
+        <button class="gesture-fallback-button" type="button" data-action="open-directly" hidden>手势不便？直接打开</button>`;
     } else if (view.phase === "reveal") {
       ritualControl = `
         <button class="ritual-layer-action" type="button" data-action="reveal-next">
@@ -881,6 +884,17 @@
     if (text) text.textContent = `${normalized}%`;
   }
 
+  function setupOpeningFallback(key) {
+    const button = document.querySelector("[data-action='open-directly']");
+    if (!button) return () => {};
+    const show = () => {
+      const current = document.querySelector("[data-action='open-directly']");
+      if (current === button && !meta.openedContainers[key]) button.hidden = false;
+    };
+    window.setTimeout(show, 3000);
+    return show;
+  }
+
   function setupFogOpeningInteraction(key) {
     const box = document.querySelector("#openingCargoBox");
     const ropeLayer = document.querySelector("#ropeLayer");
@@ -891,10 +905,20 @@
     const title = document.querySelector("#openingGestureTitle");
     const hint = document.querySelector("#openingGestureHint");
     const symbol = document.querySelector("#openingGestureSymbol");
-    if (!box || !ropeLayer || !peelTab || !veil) return;
+    const showFallback = setupOpeningFallback(key);
+    if (!box || !ropeLayer || !peelTab || !veil) {
+      showFallback();
+      return;
+    }
 
     let step = "cut";
     let start = null;
+    let failedAttempts = 0;
+
+    function recordFailure() {
+      failedAttempts += 1;
+      if (failedAttempts >= 2) showFallback();
+    }
 
     function point(event) {
       const rect = box.getBoundingClientRect();
@@ -940,6 +964,7 @@
         }, 340);
       } else {
         setProgress(progress, 0);
+        recordFailure();
       }
       start = null;
     }
@@ -985,6 +1010,7 @@
         peelTab.style.transform = "";
         veil.style.clipPath = "";
         setProgress(progress, 0);
+        recordFailure();
       }
       start = null;
     }
@@ -1007,9 +1033,19 @@
     const title = document.querySelector("#openingGestureTitle");
     const hint = document.querySelector("#openingGestureHint");
     const symbol = document.querySelector("#openingGestureSymbol");
-    if (!scene || !box || !seal) return;
+    const showFallback = setupOpeningFallback(key);
+    if (!scene || !box || !seal) {
+      showFallback();
+      return;
+    }
     let step = "seal";
     let start = null;
+    let failedAttempts = 0;
+
+    function recordFailure() {
+      failedAttempts += 1;
+      if (failedAttempts >= 2) showFallback();
+    }
 
     function startSeal(event) {
       if (step !== "seal") return;
@@ -1040,6 +1076,7 @@
       } else {
         seal.style.transform = "";
         setProgress(progress, 0);
+        recordFailure();
       }
       start = null;
       event.stopPropagation();
@@ -1080,6 +1117,7 @@
         window.setTimeout(renderOpening, 1050);
       } else {
         setProgress(progress, 0);
+        recordFailure();
       }
       start = null;
     }
@@ -1270,7 +1308,11 @@
       return;
     }
     if (action === "inspect") {
-      const result = mutate(() => game.inspect(target.dataset.inspection));
+      const result = mutate(() => {
+        const inspection = game.inspect(target.dataset.inspection);
+        meta.inspectionHintSeen = true;
+        return inspection;
+      });
       if (result) setLiveMessage(`直播间：检查结果出来了——${result.text}`, 1);
       return;
     }
@@ -1291,6 +1333,15 @@
     }
     if (action === "reveal-next") {
       revealNextItem();
+      return;
+    }
+    if (action === "open-directly") {
+      const container = selectedContainer();
+      if (!container || view.phase !== "reveal" || !view.reveal || view.reveal.winnerType !== "player") return;
+      const key = openingKey(container.id);
+      meta.openedContainers[key] = true;
+      setLiveMessage("直播间：柜门已打开，开始逐层清点。", 2);
+      renderOpening();
       return;
     }
     if (action === "return-board") {

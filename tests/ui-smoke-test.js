@@ -1,5 +1,8 @@
 "use strict";
 
+const fs = require("node:fs");
+const path = require("node:path");
+
 class FakeClassList {
   constructor() { this.values = new Set(); }
   toggle(name, force) {
@@ -109,8 +112,11 @@ if (!match) throw new Error("no selectable container");
 clickRoot({ action: "select-container", id: match[1] });
 
 if (byId.detailView.innerHTML.includes("data-action=\"inspect\"")) {
+  if (!byId.detailView.innerHTML.includes("is-recommended")) throw new Error("first inspection hint was not shown");
   const inspect = byId.detailView.innerHTML.match(/data-action="inspect" data-inspection="([^"]+)"/);
   clickRoot({ action: "inspect", inspection: inspect[1] });
+  const meta = JSON.parse(memory.get("port-auction-game-meta-v2"));
+  if (!meta.inspectionHintSeen) throw new Error("inspection hint completion was not saved");
 }
 
 if (byId.detailView.innerHTML.includes("data-action=\"start-auction\"")) {
@@ -122,7 +128,21 @@ if (byId.detailView.innerHTML.includes("data-action=\"start-auction\"")) {
   if (!byId.openingView.innerHTML.includes("SPECTATOR RESULT")) {
     throw new Error("spectator result did not render directly");
   }
+  clickRoot({ action: "return-board" });
+  const previews = [...byId.boardView.innerHTML.matchAll(/data-action="preview-container" data-id="([^"]+)"/g)];
+  const nextPreview = previews.find((entry) => entry[1] !== match[1]);
+  if (!nextPreview) throw new Error("no second container available for hint regression check");
+  clickRoot({ action: "preview-container", id: nextPreview[1] });
+  const nextMatch = byId.boardView.innerHTML.match(/data-action="select-container" data-id="([^"]+)"/);
+  if (!nextMatch) throw new Error("second container was not selectable");
+  clickRoot({ action: "select-container", id: nextMatch[1] });
+  if (byId.detailView.innerHTML.includes("is-recommended")) throw new Error("inspection hint repeated after the first use");
 }
 
 if (!memory.has("port-auction-game-save-v2")) throw new Error("save was not written");
+const appSource = fs.readFileSync(path.join(__dirname, "..", "app.js"), "utf8");
+if (!appSource.includes('data-action="open-directly" hidden')) throw new Error("opening fallback control is missing");
+if (!appSource.includes('action === "open-directly"')) throw new Error("opening fallback action is missing");
+if (!appSource.includes("window.setTimeout(show, 3000)")) throw new Error("opening fallback timeout is missing");
+if (!appSource.includes('item.isVehicle && item.rarity === "legendary"')) throw new Error("vehicle prize badge is not rarity-gated");
 console.log("ui smoke ok");

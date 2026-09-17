@@ -2223,6 +2223,26 @@ p {
   pointer-events: none;
 }
 
+.gesture-fallback-button {
+  position: absolute;
+  z-index: 61;
+  top: 11px;
+  right: 11px;
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1px solid rgba(93, 204, 187, .48);
+  border-radius: 12px;
+  background: rgba(5, 33, 40, .94);
+  color: #b9d8d3;
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .32);
+}
+
+.gesture-fallback-button[hidden] {
+  display: none;
+}
+
 .ritual-symbol {
   display: grid;
   width: 38px;
