@@ -15,6 +15,7 @@
 - [ ] 不含 `eval`、`new Function`、`javascript:` URL。
 - [ ] 不含 WASM、Web Worker、Service Worker、SharedArrayBuffer。
 - [ ] 断网并清空缓存后仍可从新局正常运行。
+- [ ] 发布包不含 `.mp3`、`.wav`、`.ogg`、`.m4a` 等非白名单音频文件。
 
 ## 产品边界
 
@@ -28,7 +29,10 @@
 - [ ] 所有主流程只用触摸完成，不依赖键盘、hover 或全屏。
 - [ ] 刘海屏安全区、滚动、弹层和软键盘场景正常。
 - [ ] 主要触摸目标约 44px 以上。
+- [ ] 正文为 13–14px，辅助信息至少 10px；除场景贴纸外没有 10px 以下的功能文字。
 - [ ] 低端机动画流畅，快速点击不会重复结算。
+- [ ] 首次触摸后声音可启动；静音开关、切后台暂停和不支持环境降级正常。
+- [ ] 小红书 iOS、Android 体验版均完成 Web Audio 真机测试。
 
 ## 游戏逻辑
 
@@ -43,6 +47,6 @@
 
 ## 包体
 
-- [ ] 不包含 `.git/`、`docs/`、`tests/`、`tools/`、`reports/`、`.github/` 和 `prototypes/`。
+- [ ] 不包含 `.git/`、`docs/`、`tests/` 和 `.github/`。
 - [ ] 不包含浏览器 profile、Cookie、History、Crashpad 或缓存。
 - [ ] ZIP 尽量小于 10MB。

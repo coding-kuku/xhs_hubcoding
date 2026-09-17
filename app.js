@@ -67,6 +67,16 @@
   let previewContainerId = null;
   let toastTimer = null;
   let meta = loadMeta();
+  const audio = window.PortAudio
+    ? window.PortAudio.create()
+    : {
+        unlock: () => Promise.resolve(false),
+        setScene: () => {},
+        sfx: () => false,
+        getSettings: () => ({ music: false, sfx: false, supported: false }),
+        toggleMusic: () => false,
+        toggleEffects: () => false
+      };
 
   function defaultMeta() {
     return {
@@ -261,6 +271,17 @@
   function showView(viewId, flowMode) {
     elements.views.forEach((section) => section.classList.toggle("is-active", section.id === viewId));
     elements.app.classList.toggle("is-flow", Boolean(flowMode));
+    const sceneByView = {
+      boardView: activeTab === "warehouse" ? "warehouse" : activeTab === "market" ? "market" : activeTab === "collection" ? "collection" : "board",
+      detailView: "detail",
+      auctionView: "auction",
+      openingView: "opening",
+      dispositionView: "disposition",
+      warehouseView: "warehouse",
+      marketView: "market",
+      collectionView: "collection"
+    };
+    audio.setScene(sceneByView[viewId] || "board", { round: view && view.auction ? view.auction.round : 1 });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -956,6 +977,7 @@
       if (distance > 82 && crossedCenter) {
         step = "peel";
         box.classList.add("is-cut");
+        audio.sfx("rope-cut");
         setProgress(progress, 0);
         window.setTimeout(() => {
           if (symbol) symbol.textContent = "↘";
@@ -992,6 +1014,7 @@
       if (step === "done") return;
       step = "done";
       box.classList.add("is-fog-revealed");
+      audio.sfx("veil-open");
       meta.openedContainers[key] = true;
       setProgress(progress, 100);
       if (symbol) symbol.textContent = "✓";
@@ -1069,6 +1092,7 @@
         step = "door";
         seal.style.transform = "";
         box.classList.add("is-unsealed");
+        audio.sfx("seal-break");
         setProgress(progress, 0);
         symbol.textContent = "↔";
         title.textContent = "横向滑动，拉开两扇柜门";
@@ -1108,6 +1132,7 @@
       if (distance > 58) {
         step = "done";
         box.classList.add("is-open");
+        audio.sfx("door-open");
         meta.openedContainers[key] = true;
         setProgress(progress, 100);
         title.textContent = "柜门已打开，可以逐层清点";
@@ -1155,11 +1180,14 @@
     view = game.getView();
     if (!view.reveal) return;
     if (view.reveal.winnerType === "player") {
+      audio.sfx("auction-win");
       setLiveMessage(`拍卖师：${money(view.reveal.price)} 落槌，货柜归你。`, 4);
     } else if (view.reveal.winnerType === "npc") {
+      audio.sfx("auction-lose");
       const npc = view.activeNpcs.find((row) => row.id === view.reveal.winnerId);
       setLiveMessage(`直播间：${npc ? npc.name : "对手"}拍走了这柜，看看你是否躲过一坑。`, 1);
     } else {
+      audio.sfx("auction-unsold");
       setLiveMessage("拍卖师：无人接价，本柜流拍。", 0);
     }
   }
@@ -1208,6 +1236,16 @@
       } else {
         setLiveMessage(`直播间：${item.name}，先记下今天的行情再决定。`, 4);
       }
+      if (item.type === "fragment") {
+        const fragmentNames = FRAGMENT_SETS[item.set] || [];
+        audio.sfx("reveal-fragment", { motifIndex: Math.max(0, fragmentNames.indexOf(item.name)) });
+      } else if (item.type === "collectible") {
+        audio.sfx("reveal-collectible", { rarity: item.rarity, isVehicle: item.isVehicle });
+      } else if (item.type === "trash") {
+        audio.sfx("reveal-trash");
+      } else {
+        audio.sfx("reveal-ordinary");
+      }
       persist();
       render();
       if (shouldShowcase(item)) showLootShowcase(item);
@@ -1227,6 +1265,7 @@
       persist();
       closeModal();
       render();
+      audio.sfx("new-day");
       showToast("新一天已开始");
     } catch (error) {
       showToast(error && error.message ? error.message : "暂时无法进入下一天");
@@ -1268,10 +1307,20 @@
   }
 
   function showSettings() {
+    const sound = audio.getSettings();
     showModal(`
       <p class="section-kicker">LOCAL SAVE</p>
-      <h2>离线存档</h2>
+      <h2>设置</h2>
       <p>今日货柜、竞拍进度、仓库与收藏均保存在本机。每日货柜只在日期变化后刷新。</p>
+      <div class="sound-settings" aria-label="声音设置">
+        <button class="sound-toggle ${sound.music ? "is-on" : ""}" type="button" data-modal-action="toggle-music">
+          <span><b>舒缓背景音乐</b><small>轻柔木琴旋律 · 无持续底噪</small></span><strong>${sound.music ? "已开启" : "已关闭"}</strong>
+        </button>
+        <button class="sound-toggle ${sound.sfx ? "is-on" : ""}" type="button" data-modal-action="toggle-effects">
+          <span><b>操作音效</b><small>落槌、开柜与物品揭晓</small></span><strong>${sound.sfx ? "已开启" : "已关闭"}</strong>
+        </button>
+        ${sound.supported ? "" : `<p class="sound-warning">当前环境不支持程序化声音，游戏已自动静音，不影响正常游玩。</p>`}
+      </div>
       <div class="modal-actions">
         <button class="secondary-button" type="button" data-modal-action="close">继续游戏</button>
         <button class="danger-button" type="button" data-modal-action="confirm-reset">清除存档并重新开始</button>
@@ -1289,6 +1338,10 @@
       </div>`);
   }
 
+  elements.app.addEventListener("pointerdown", () => {
+    audio.unlock();
+  }, { capture: true });
+
   elements.root.addEventListener("click", (event) => {
     const target = event.target.closest("[data-action]");
     if (!target) return;
@@ -1296,14 +1349,17 @@
 
     if (action === "preview-container") {
       previewContainerId = target.dataset.id;
+      audio.sfx("preview");
       renderBoard();
       return;
     }
     if (action === "select-container") {
+      audio.sfx("select");
       mutate(() => game.selectContainer(target.dataset.id));
       return;
     }
     if (action === "cancel-selection") {
+      audio.sfx("preview");
       mutate(() => game.cancelSelection());
       return;
     }
@@ -1313,11 +1369,15 @@
         meta.inspectionHintSeen = true;
         return inspection;
       });
-      if (result) setLiveMessage(`直播间：检查结果出来了——${result.text}`, 1);
+      if (result) {
+        audio.sfx(`inspect-${target.dataset.inspection}`);
+        setLiveMessage(`直播间：检查结果出来了——${result.text}`, 1);
+      }
       return;
     }
     if (action === "start-auction") {
       mutate(() => game.startAuction());
+      audio.sfx("auction-start");
       setLiveMessage("拍卖师：第一锤，谁先举牌？", 1);
       return;
     }
@@ -1325,7 +1385,8 @@
       const result = mutate(() => game.auctionAction(target.dataset.bid));
       if (result) {
         view = game.getView();
-        if (view.phase !== "auction") afterAuctionAction();
+        if (view.phase === "auction") audio.sfx(`bid-${target.dataset.bid}`);
+        else afterAuctionAction();
         persist();
         render();
       }
@@ -1340,6 +1401,7 @@
       if (!container || view.phase !== "reveal" || !view.reveal || view.reveal.winnerType !== "player") return;
       const key = openingKey(container.id);
       meta.openedContainers[key] = true;
+      audio.sfx(container.isFog ? "veil-open" : "door-open");
       setLiveMessage("直播间：柜门已打开，开始逐层清点。", 2);
       renderOpening();
       return;
@@ -1352,29 +1414,45 @@
     }
     if (action === "dispose") {
       const beforePhase = view.phase;
+      const pending = view.pendingItems[Number(target.dataset.index)];
+      const completedBefore = new Set(view.collections.completedSets || []);
       const result = mutate(() => game.disposeItem(Number(target.dataset.index), target.dataset.dispose));
+      if (result && pending) {
+        if (target.dataset.dispose === "store") {
+          const completedAfter = view.collections.completedSets || [];
+          const completedNow = completedAfter.some((setName) => !completedBefore.has(setName));
+          audio.sfx(completedNow ? "set-complete" : "store");
+        } else {
+          audio.sfx(pending.item.quickValue < 0 ? "cleanup" : "sell");
+        }
+      }
       if (result && beforePhase === "disposition" && game.getView().phase === "board") {
         setLiveMessage("直播间：这一柜清点完了，下一只还在码头等你。", 2);
       }
       return;
     }
     if (action === "rent-expansion") {
-      mutate(() => game.rentWarehouseExpansion(), { message: "已扩租 10 个仓位" });
+      const result = mutate(() => game.rentWarehouseExpansion(), { message: "已扩租 10 个仓位" });
+      if (result) audio.sfx("expand");
       return;
     }
     if (action === "renew-warehouse") {
-      mutate(() => game.renewWarehouse(), { message: "本月仓租已补交" });
+      const result = mutate(() => game.renewWarehouse(), { message: "本月仓租已补交" });
+      if (result) audio.sfx("expand");
       return;
     }
     if (action === "sell-lot") {
       const channel = target.dataset.channel;
-      mutate(() => game.sellWarehouseLot(target.dataset.lot, channel), {
+      const lot = view.warehouse.lots.find((row) => row.lotId === target.dataset.lot);
+      const result = mutate(() => game.sellWarehouseLot(target.dataset.lot, channel), {
         message: channel === "merchant" ? "已卖给定向商户" : "已按今日行情出售"
       });
+      if (result) audio.sfx(lot && lot.stallValue < 0 ? "cleanup" : "sell");
       return;
     }
     if (action === "claim-recovery") {
-      mutate(() => game.claimRecoveryJob(), { message: "搬运完成，临时周转金已经到账" });
+      const result = mutate(() => game.claimRecoveryJob(), { message: "搬运完成，临时周转金已经到账" });
+      if (result) audio.sfx("recovery");
       setLiveMessage("码头主管：先拿这笔周转金，别再闭眼乱拍。", 0);
       return;
     }
@@ -1409,8 +1487,16 @@
       meta.tutorialSeen = true;
       persist();
       closeModal();
+      audio.sfx("select");
     } else if (action === "close" || action === "loot-close") {
       closeModal();
+    } else if (action === "toggle-music") {
+      audio.toggleMusic();
+      showSettings();
+    } else if (action === "toggle-effects") {
+      const enabled = audio.toggleEffects();
+      if (enabled) audio.sfx("select");
+      showSettings();
     } else if (action === "confirm-reset") {
       showResetConfirmation();
     } else if (action === "advance-day") {

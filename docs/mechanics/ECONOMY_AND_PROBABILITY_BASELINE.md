@@ -276,4 +276,4 @@ node tests/mainline-playability-test.js
 node tests/stress-test.js
 ```
 
-旧 `src/data/economy-config.json` 与 `tools/simulate-economy.mjs` 仅为历史记录，不代表当前运行时。
+运行时数值以 `src/core/daily-generator.js` 和 `src/core/game-engine.js` 为唯一实现；回归结果由上述测试直接验证，不维护平行的旧版配置或模拟器。

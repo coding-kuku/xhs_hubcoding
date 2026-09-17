@@ -10,7 +10,8 @@ const runtimeFiles = [
   "styles.css",
   "app.js",
   "src/core/daily-generator.js",
-  "src/core/game-engine.js"
+  "src/core/game-engine.js",
+  "src/audio/audio-engine.js"
 ];
 const runtimeAssets = [
   "assets/luxury-atlas.webp",
@@ -18,6 +19,16 @@ const runtimeAssets = [
   "assets/premium-atlas.webp",
   "assets/treasure-atlas.webp",
   "assets/vintage-atlas.webp"
+];
+const retiredPaths = [
+  "prototypes",
+  "reports/economy-simulation-v1.json",
+  "src/data/clue-config.json",
+  "src/data/economy-config.json",
+  "tests/legacy-prototype-smoke-test.js",
+  "tools/simulate-economy.mjs",
+  "docs/ui/ui-style-v2.png",
+  "docs/ui/ui-style-v2.svg"
 ];
 const forbidden = [
   [/https?:\/\//i, "HTTP(S) URL"],
@@ -48,10 +59,14 @@ for (const relative of runtimeAssets) {
   assert.equal(fs.existsSync(path.join(root, relative)), true, `缺少本地素材：${relative}`);
 }
 
+for (const relative of retiredPaths) {
+  assert.equal(fs.existsSync(path.join(root, relative)), false, `仍保留已替代内容：${relative}`);
+}
+
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 assert.equal(/<script(?![^>]*\bsrc\s*=)[^>]*>/i.test(html), false, "index.html 存在内联脚本");
 assert.equal(/\son[a-z]+\s*=/i.test(html), false, "index.html 存在行内事件");
-for (const scriptPath of ["./src/core/daily-generator.js", "./src/core/game-engine.js", "./app.js"]) {
+for (const scriptPath of ["./src/core/daily-generator.js", "./src/core/game-engine.js", "./src/audio/audio-engine.js", "./app.js"]) {
   assert.ok(html.includes(`src="${scriptPath}"`), `index.html 未加载 ${scriptPath}`);
 }
 

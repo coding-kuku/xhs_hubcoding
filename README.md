@@ -14,11 +14,12 @@
 | 每日五柜生成 | 已实现并有测试 | `src/core/daily-generator.js` |
 | 拍卖、开柜、处置、仓库状态机 | 已实现并有测试 | `src/core/game-engine.js` |
 | 经济与概率模型 | 已实装并形成回归基线 | `src/core/daily-generator.js`、`docs/mechanics/ECONOMY_AND_PROBABILITY_BASELINE.md` |
-| 线索配置 | 已形成基线 | `src/data/clue-config.json` |
+| 线索生成 | 已形成基线并有测试 | `src/core/daily-generator.js` |
 | 拍卖场、仓库、交易摊、藏品册与直播反馈 | 已接线 | 根目录运行文件 |
+| 程序化舒缓手作 BGM 与操作音效 | 已接线，待小红书双端真机验收 | `src/audio/audio-engine.js`、`app.js` |
 | NPC 长线关系、榜一与随机事件 | 规则方向已确认，待实现 | `docs/mechanics/NPC_AND_RANDOM_EVENTS.md` |
 
-根目录页面就是当前完整游戏入口。旧原型统一放在 `prototypes/archive/`，仅用于回溯，不再作为新功能开发入口。
+根目录页面就是当前完整游戏入口，也是仓库内唯一保留的游戏实现。
 
 ## 游戏主循环
 
@@ -67,17 +68,14 @@
 ├─ assets/                     # NPC、现代藏品与宝藏本地图集
 ├─ src/
 │  ├─ core/                    # 生成器和状态机
-│  └─ data/                    # 数值与线索结构化基线
+│  └─ audio/                   # 零音频文件的 Web Audio 声场与音效
 ├─ tests/                      # 生成、状态、压力与合规测试
-├─ tools/                      # 仅开发期使用的平衡模拟器
-├─ reports/                    # 可追溯的代表性模拟结果
 ├─ docs/
 │  ├─ product/                 # 产品定位、范围、路线图
 │  ├─ mechanics/               # 已确认玩法机制
 │  ├─ ui/                      # 视觉方向与稿件
 │  ├─ engineering/             # 架构、状态、发布规则
 │  └─ decisions/               # 关键决策记录
-├─ prototypes/archive/         # 历史原型，只用于回溯
 └─ .github/                    # Issue 与 PR 模板
 ```
 
@@ -96,8 +94,10 @@ node tests/test-generator.js
 node tests/economy-balance-test.js
 node tests/mainline-playability-test.js
 node tests/test-engine.js
+node tests/modern-content-test.js
+node tests/ui-smoke-test.js
+node tests/test-audio-engine.js
 node tests/stress-test.js
-node tests/legacy-prototype-smoke-test.js
 node tests/repository-compliance.js
 ```
 
@@ -107,8 +107,6 @@ node tests/repository-compliance.js
 node tests/economy-balance-test.js
 node tests/mainline-playability-test.js
 ```
-
-`tools/simulate-economy.mjs` 与 `src/data/economy-config.json` 保留为旧版研究记录，不再代表当前运行时经济。
 
 ## 如何维护
 
@@ -120,7 +118,7 @@ node tests/mainline-playability-test.js
 | 物品名称、价格、藏品、碎片、垃圾 | `src/core/daily-generator.js` | 商品价格清单、生成器测试 |
 | 市场波动、商户溢价、仓租 | 每日生成器与 `src/core/game-engine.js` | 经济测试、状态机测试 |
 | 雾柜概率和结果 | 每日生成器 | 生成器测试、经济测试 |
-| 申报、外观、检查文本 | `src/data/clue-config.json`、每日生成器 | `CLUE_AND_INSPECTION.md` |
+| 申报、外观、检查文本 | `src/core/daily-generator.js` | `CLUE_AND_INSPECTION.md`、生成器测试 |
 | 拍卖轮次、加价单位、封槌规则 | `src/core/game-engine.js` | `AUCTION_RULES.md`、状态机测试 |
 | 每日五柜与资产解锁 | `src/core/daily-generator.js` | `DAILY_GENERATION.md`、生成器测试 |
 | 仓库和跨月扣租 | `src/core/game-engine.js` | `WAREHOUSE_MARKET_AND_LIVE.md`、状态机测试 |
@@ -129,7 +127,7 @@ node tests/mainline-playability-test.js
 | 开柜动作和反馈节奏 | `app.js`、`styles.css` | 触摸操作与低端机体验 |
 | 小红书上传规则 | 根目录运行文件 | `RELEASE_CHECKLIST.md`、合规测试 |
 
-当前唯一生效的经济逻辑在生成器和状态机中；旧 JSON 只作历史研究记录。后续仍应将运行时常量收敛到本地 `.js` 数据文件，不能用 `fetch` 读取 JSON。详情见架构与实施状态文档。
+经济、线索和内容生成的唯一生效数据都在每日生成器中，状态迁移规则在游戏状态机中；修改时不要另建平行配置。运行时不能用 `fetch` 读取配置，因为项目必须支持直接打开和完全离线运行。
 
 ## 分支和版本建议
 
@@ -142,7 +140,7 @@ node tests/mainline-playability-test.js
 
 ## 小红书发布边界
 
-GitHub 仓库可以保留 Markdown、测试脚本和模拟工具，但上传到小红书的 ZIP 只应包含运行所需的 HTML、CSS、JS、图片、字体和必要 JSON。不得把 `docs/`、`tests/`、`tools/`、`reports/`、`.github/`、`.git/` 或历史原型打进发布包。
+GitHub 仓库可以保留 Markdown 和测试脚本，但上传到小红书的 ZIP 只应包含运行所需的 HTML、CSS、JS、图片和字体。不得把 `docs/`、`tests/`、`.github/` 或 `.git/` 打进发布包。
 
 ## License
 
@@ -163,6 +161,7 @@ GitHub 仓库可以保留 Markdown、测试脚本和模拟工具，但上传到�
 - 仓库、行情、交易摊和直播售卖：[WAREHOUSE_MARKET_AND_LIVE.md](docs/mechanics/WAREHOUSE_MARKET_AND_LIVE.md)
 - 固定 NPC、好感、恩怨和随机事件：[NPC_AND_RANDOM_EVENTS.md](docs/mechanics/NPC_AND_RANDOM_EVENTS.md)
 - 界面风格与前端美化：[UI_DIRECTION.md](docs/ui/UI_DIRECTION.md)
+- 舒缓手作声场与音效规范：[AUDIO_DIRECTION.md](docs/ui/AUDIO_DIRECTION.md)
 - 工程架构与数据归属：[ARCHITECTURE.md](docs/engineering/ARCHITECTURE.md)
 - 当前实现完成度和缺口：[IMPLEMENTATION_STATUS.md](docs/engineering/IMPLEMENTATION_STATUS.md)
 - 上传前自检：[RELEASE_CHECKLIST.md](docs/engineering/RELEASE_CHECKLIST.md)
