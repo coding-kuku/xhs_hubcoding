@@ -13,6 +13,12 @@
     trash: "垃圾异物"
   };
   const TYPE_SYMBOLS = { ordinary: "货", collectible: "藏", fragment: "片", trash: "废" };
+  const DISCOVERY_GROUPS = [
+    { type: "ordinary", label: "普通货物" },
+    { type: "collectible", label: "实体藏品" },
+    { type: "fragment", label: "宝藏碎片" },
+    { type: "trash", label: "特殊杂物" }
+  ];
   const FRAGMENT_SETS = {
     "沉船航海图": ["沉船航海图·西北角", "沉船航海图·东北角", "沉船航海图·西南角", "沉船航海图·东南角"],
     "黄铜星盘": ["黄铜星盘·刻度环", "黄铜星盘·星针", "黄铜星盘·悬臂", "黄铜星盘·底盘"],
@@ -914,22 +920,43 @@
   function renderCollection() {
     activeTab = "collection";
     updateNav();
+    const discoveredNames = new Set(view.collections.discovered);
     const setCards = Object.entries(FRAGMENT_SETS).map(([setName, names]) => {
       const owned = names.filter((name) => (view.collections.ownedFragments[name] || 0) > 0).length;
-      const covers = names.map((name, index) => `<i class="fragment-cover q${index} ${(view.collections.ownedFragments[name] || 0) > 0 ? "is-owned" : ""}"></i>`).join("");
-      const dots = names.map((name) => `<div class="fragment-dot ${(view.collections.ownedFragments[name] || 0) > 0 ? "is-owned" : ""}">${escapeHtml(name.split("·")[1])}</div>`).join("");
-      return `<article class="set-card"><div class="set-picture">${atlasMarkup(`treasure-${SET_ATLAS_INDEX[setName]}`, "set-atlas", setName)}<div class="fragment-covers">${covers}</div><b>${owned}/4</b></div><div class="set-info"><header class="set-head"><strong>${escapeHtml(setName)}</strong><span>${owned === 4 ? "已完成" : `还差 ${4 - owned} 片`}</span></header><div class="fragment-dots">${dots}</div></div></article>`;
+      const discovered = names.filter((name) => discoveredNames.has(name)).length;
+      const displaySetName = discovered > 0 ? setName : "未知宝藏";
+      const covers = names.map((name, index) => `<i class="fragment-cover q${index} ${discoveredNames.has(name) ? "is-discovered" : ""}"></i>`).join("");
+      const dots = names.map((name) => {
+        const isDiscovered = discoveredNames.has(name);
+        const isOwned = (view.collections.ownedFragments[name] || 0) > 0;
+        return `<div class="fragment-dot ${isDiscovered ? "is-discovered" : ""} ${isOwned ? "is-owned" : ""}">${isDiscovered ? escapeHtml(name.split("·")[1]) : "??"}</div>`;
+      }).join("");
+      const setStatus = owned === 4 ? "已完成" : discovered === 0 ? "尚未发现碎片" : `还差 ${4 - owned} 片`;
+      return `<article class="set-card"><div class="set-picture">${atlasMarkup(`treasure-${SET_ATLAS_INDEX[setName]}`, "set-atlas", displaySetName)}<div class="fragment-covers">${covers}</div><b>${owned}/4</b></div><div class="set-info"><header class="set-head"><strong>${escapeHtml(displaySetName)}</strong><span>${setStatus}</span></header><div class="fragment-dots">${dots}</div></div></article>`;
     }).join("");
-    const discoveryTags = view.collections.discovered.map((name) => {
-      const visualId = VISUAL_BY_NAME[name];
-      return `<div class="discovery-card">${visualId ? atlasMarkup(visualId, "discovery-art", name) : `<div class="discovery-glyph">◇</div>`}<span>${escapeHtml(name)}</span></div>`;
+    const groupedDiscoveries = Object.fromEntries(DISCOVERY_GROUPS.map((group) => [group.type, []]));
+    view.collections.discovered.forEach((name) => {
+      const profile = window.CargoDailyGenerator.itemProfile(name) || { type: "ordinary", category: "未分类", visualId: VISUAL_BY_NAME[name] || null };
+      const type = groupedDiscoveries[profile.type] ? profile.type : "ordinary";
+      groupedDiscoveries[type].push({ name, ...profile, type });
+    });
+    Object.values(groupedDiscoveries).forEach((items) => items.sort((left, right) => left.name.localeCompare(right.name, "zh-CN")));
+    const populatedGroups = DISCOVERY_GROUPS.filter((group) => groupedDiscoveries[group.type].length > 0);
+    const defaultOpenType = (populatedGroups.find((group) => group.type === "ordinary") || populatedGroups[0] || {}).type;
+    const discoveryGroups = populatedGroups.map((group) => {
+      const items = groupedDiscoveries[group.type];
+      const records = items.map((item) => `<article class="discovery-record">${itemVisualMarkup(item, "is-discovery-thumb")}<span>${escapeHtml(item.name)}</span></article>`).join("");
+      return `<details class="discovery-group" name="discovery-groups" ${group.type === defaultOpenType ? "open" : ""}>
+        <summary>${categoryIconMarkup({ type: group.type }, "discovery-group-icon")}<strong>${group.label}</strong><small>${items.length} 种</small><i></i></summary>
+        <div class="discovery-records">${records}</div>
+      </details>`;
     }).join("");
     document.querySelector("#collectionView").innerHTML = `
       <header class="section-heading"><div><p class="section-kicker">COLLECTION</p><h2>港口藏品册</h2></div><div class="section-meta">卖掉也保留<br>首次发现记录</div></header>
       <div class="collection-hero"><strong>${view.collections.discovered.length}</strong><span>种物品已经见过 · 3 套宝藏等待拼齐</span></div>
       ${setCards}
-      <h3 class="inspection-title">发现记录</h3>
-      <div class="discoveries">${discoveryTags || `<div class="empty-state"><i>◇</i><strong>还没有发现</strong><p>第一次开仓后，见过的物品会永久记录在这里。</p></div>`}</div>`;
+      <div class="discovery-heading"><h3>发现记录 <span>${view.collections.discovered.length} 种</span></h3><small>只显示已发现名称 · 未发现内容保持未知</small></div>
+      <div class="discovery-groups">${discoveryGroups || `<div class="empty-state"><i>◇</i><strong>还没有发现</strong><p>第一次开仓后，见过的物品会永久记录在这里。</p></div>`}</div>`;
     showView("collectionView", false);
   }
 

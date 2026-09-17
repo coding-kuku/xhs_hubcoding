@@ -72,6 +72,21 @@ global.window.location = { reload() {} };
 global.CargoDailyGenerator = require("../src/core/daily-generator.js");
 global.CargoGameEngine = require("../src/core/game-engine.js");
 
+const seededGame = global.CargoGameEngine.createGame({
+  generator: global.CargoDailyGenerator,
+  dateKey: "2026-09-15",
+  initialCash: 6000
+});
+const seededSave = seededGame.exportSave();
+seededSave.collections.discovered = [
+  "沉船航海图·西北角",
+  "酒店布草包",
+  "瑞士陀飞轮腕表",
+  "只有杯盖没有杯"
+];
+seededSave.collections.ownedFragments = { "沉船航海图·西北角": 1 };
+memory.set("port-auction-game-save-v2", JSON.stringify(seededSave));
+
 require("../app.js");
 
 function clickRoot(dataset) {
@@ -118,6 +133,29 @@ if (!marketCounts || marketCounts.slice(1).map(Number).reduce((sum, count) => su
 if (byId.marketView.innerHTML.includes("market-grid")) throw new Error("retired market card grid still rendered");
 clickNav("collection");
 if (!byId.collectionView.innerHTML.includes("港口藏品册")) throw new Error("collection did not render");
+if (!navButtons.find((button) => button.dataset.tab === "collection").classList.contains("is-active")) {
+  throw new Error("collection navigation did not become active");
+}
+if (!byId.collectionView.innerHTML.includes("西北角")) throw new Error("discovered fragment name was not revealed");
+if (byId.collectionView.innerHTML.includes("东北角")) throw new Error("undiscovered fragment name was exposed");
+if (byId.collectionView.innerHTML.includes("黄铜星盘") || byId.collectionView.innerHTML.includes("消失的剧院")) {
+  throw new Error("undiscovered treasure set name was exposed");
+}
+if (!byId.collectionView.innerHTML.includes("未知宝藏") || !byId.collectionView.innerHTML.includes("??")) {
+  throw new Error("undiscovered collection content was not concealed");
+}
+if (!byId.collectionView.innerHTML.includes("只显示已发现名称 · 未发现内容保持未知")) {
+  throw new Error("collection mystery rule was not explained");
+}
+for (const label of ["普通货物", "实体藏品", "宝藏碎片", "特殊杂物"]) {
+  if (!byId.collectionView.innerHTML.includes(label)) throw new Error(`${label} discovery group did not render`);
+}
+if ((byId.collectionView.innerHTML.match(/<details class="discovery-group"/g) || []).length !== 4) {
+  throw new Error("discovery records were not grouped into four collapsible sections");
+}
+if (!byId.collectionView.innerHTML.includes('name="discovery-groups"')) {
+  throw new Error("discovery groups are not configured as compact accordions");
+}
 clickNav("board");
 
 const match = byId.boardView.innerHTML.match(/data-action="select-container" data-id="([^"]+)"/);

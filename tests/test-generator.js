@@ -19,6 +19,18 @@ assert.notDeepEqual(
 );
 assert.equal(first.containers.length, 5, "每日必须生成五个货柜");
 assert.equal(generator.publicContainerView(first.containers[0]).trueState, undefined, "公开视图不能泄露真实货物");
+assert.deepEqual(generator.itemProfile("酒店布草包"), {
+  type: "ordinary",
+  category: "商用库存",
+  set: null,
+  kind: null,
+  visualId: null
+}, "普通货物应能从唯一商品定义读取分类");
+assert.equal(generator.itemProfile("瑞士陀飞轮腕表").type, "collectible", "实体藏品分类应可查询");
+assert.equal(generator.itemProfile("沉船航海图·西北角").type, "fragment", "宝藏碎片分类应可查询");
+assert.equal(generator.itemProfile("只有杯盖没有杯").type, "trash", "特殊杂物分类应可查询");
+assert.equal(generator.itemProfile("高性能中置跑车").category, "车辆大奖", "大奖商品应复用同一分类查询");
+assert.equal(generator.itemProfile("不存在的物品"), null, "未知名称不应生成虚假分类");
 
 const bandChecks = [
   { totalAssets: 6000, expected: ["low", "low", "medium", "medium", "high"] },

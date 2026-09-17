@@ -299,6 +299,23 @@
     { name: "稀有高性能摩托", category: "车辆大奖", visualId: "premium-8", riskProfile: "vehicle", storageSlots: 6, quantity: "1 辆", isVehicle: true, tags: ["vehicle", "luxury", "heavy", "dense"] }
   ];
 
+  const ITEM_PROFILES = Object.freeze(Object.fromEntries([
+    ...Object.entries(ITEMS).flatMap(([type, rows]) => rows.map((item) => [item.name, Object.freeze({
+      type,
+      category: item.category || (type === "fragment" ? "宝藏碎片" : "特殊杂物"),
+      set: item.set || null,
+      kind: item.kind || null,
+      visualId: item.visualId || null
+    })])),
+    ...JACKPOT_ITEMS.map((item) => [item.name, Object.freeze({
+      type: "collectible",
+      category: item.category,
+      set: null,
+      kind: null,
+      visualId: item.visualId
+    })])
+  ]));
+
   const MANIFESTS = [
     { id: "hotel_clearance", label: "旅店清仓物资", tags: ["hotel"] },
     { id: "photo_studio", label: "影像工作室器材", tags: ["photo"] },
@@ -1064,9 +1081,15 @@
     };
   }
 
+  function itemProfile(name) {
+    const profile = ITEM_PROFILES[String(name || "")];
+    return profile ? { ...profile } : null;
+  }
+
   return Object.freeze({
     VERSION,
     createDailyBoard,
+    itemProfile,
     localDateKey,
     publicContainerView
   });
